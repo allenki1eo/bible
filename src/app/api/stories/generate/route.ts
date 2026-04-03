@@ -74,74 +74,40 @@ const BIBLE_REFERENCES: Record<string, { en: string; sw: string; verses: string[
 };
 
 async function generateSwahiliStory(systemPrompt: string, userPrompt: string, maxTokens: number): Promise<string | null> {
-  const hfKey = process.env.HUGGINGFACE_API_KEY;
-
-  if (hfKey) {
-    try {
-      const response = await fetch(
-        "https://router.huggingface.co/hf-inference/models/CohereForAI/aya-23-8b/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${hfKey}`,
-          },
-          body: JSON.stringify({
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.7,
-            max_tokens: maxTokens,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) return content;
-      } else {
-        const errText = await response.text();
-        console.error("Aya-23 Swahili error:", response.status, errText);
-      }
-    } catch (err) {
-      console.error("Aya-23 Swahili fetch error:", err);
-    }
-  }
-
-  // Fallback to Groq if HF unavailable
   const groqKey = process.env.GROQ_API_KEY;
-  if (groqKey) {
-    try {
-      const response = await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${groqKey}`,
-          },
-          body: JSON.stringify({
-            model: "llama-3.1-8b-instant",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            temperature: 0.7,
-            max_tokens: maxTokens,
-          }),
-        }
-      );
+  if (!groqKey) return null;
 
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content) return content;
+  try {
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: "gemma2-9b-it",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: maxTokens,
+        }),
       }
-    } catch (err) {
-      console.error("Groq Swahili fallback error:", err);
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) return content;
+    } else {
+      const errText = await response.text();
+      console.error("Gemma Swahili error:", response.status, errText);
     }
+  } catch (err) {
+    console.error("Gemma Swahili fetch error:", err);
   }
 
   return null;
@@ -261,7 +227,7 @@ Write in simple, warm language, about ${wordCount} words.`;
 
     if (!storyContent) {
       return NextResponse.json(
-        { error: "Story generation failed. Check API keys (HUGGINGFACE_API_KEY for Swahili, GROQ_API_KEY for English)." },
+        { error: "Story generation failed. Check your GROQ_API_KEY." },
         { status: 500 }
       );
     }

@@ -51,7 +51,7 @@ export default function SavedPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const heroEmojis = {
+  const heroEmojis: Record<string, string> = {
     david: "\uD83C\uDFB5", esther: "\uD83D\uDC51", daniel: "\uD83E\uDD81",
     ruth: "\uD83C\uDF3E", joseph: "\uD83C\uDF08", mary: "\uD83D\uDD4A",
     moses: "\uD83D\uDCA1", noah: "\uD83C\uDFA8", samson: "\uD83D\uDCAA",
@@ -59,7 +59,7 @@ export default function SavedPage() {
     abraham: "\u2B50", hannah: "\uD83D\uDE4F",
   };
 
-  const moodEmojis = {
+  const moodEmojis: Record<string, string> = {
     struggling: "\uD83D\uDE14", neutral: "\uD83D\uDE10",
     peaceful: "\uD83D\uDE42", joyful: "\uD83D\uDE0A", seeking: "\uD83D\uDE4F",
   };

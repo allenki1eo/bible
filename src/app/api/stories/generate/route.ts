@@ -77,6 +77,53 @@ async function generateSwahiliStory(systemPrompt: string, userPrompt: string, ma
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) return null;
 
+  // Try multiple Gemma model IDs in case one is unavailable
+  const models = [
+    "google/gemma-2-9b-it",
+    "gemma2-9b-it",
+    "gemma-2-9b-it",
+  ];
+
+  for (const model of models) {
+    try {
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+            max_tokens: maxTokens,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) {
+          console.log("Swahili story generated with model:", model);
+          return content;
+        }
+      } else {
+        const errText = await response.text();
+        console.warn(`Swahili model ${model} failed:`, response.status, errText);
+      }
+    } catch (err) {
+      console.warn(`Swahili model ${model} fetch error:`, err);
+    }
+  }
+
+  // Final fallback: llama-3.1-8b-instant
+  console.log("Falling back to llama-3.1-8b-instant for Swahili");
   try {
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
@@ -87,7 +134,7 @@ async function generateSwahiliStory(systemPrompt: string, userPrompt: string, ma
           Authorization: `Bearer ${groqKey}`,
         },
         body: JSON.stringify({
-          model: "gemma2-9b-it",
+          model: "llama-3.1-8b-instant",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
@@ -104,10 +151,10 @@ async function generateSwahiliStory(systemPrompt: string, userPrompt: string, ma
       if (content) return content;
     } else {
       const errText = await response.text();
-      console.error("Gemma Swahili error:", response.status, errText);
+      console.error("Llama Swahili fallback error:", response.status, errText);
     }
   } catch (err) {
-    console.error("Gemma Swahili fetch error:", err);
+    console.error("Llama Swahili fallback fetch error:", err);
   }
 
   return null;

@@ -75,6 +75,7 @@ export default function StoriesPage() {
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
   const [storyLength, setStoryLength] = useState<"short" | "medium">("short");
   const [storyLang, setStoryLang] = useState<"en" | "sw">(locale as "en" | "sw");
+  const [customTitle, setCustomTitle] = useState("");
   const [playing, setPlaying] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -138,6 +139,7 @@ export default function StoriesPage() {
           lesson: selectedLesson,
           language: storyLang,
           length: storyLength,
+          customTitle: customTitle.trim() || null,
         }),
       });
 
@@ -526,7 +528,7 @@ export default function StoriesPage() {
                 ))}
               </div>
             </div>
-            <div>
+            <div className="space-y-4">
               <p className="text-muted-foreground text-sm mb-3">{t("stories.language")}</p>
               <div className="grid grid-cols-2 gap-3">
                 {(["en", "sw"] as const).map((lang) => (
@@ -538,6 +540,21 @@ export default function StoriesPage() {
                 ))}
               </div>
             </div>
+
+            {/* Custom Story Title */}
+            <div className="space-y-3">
+              <p className="text-muted-foreground text-sm">{t("stories.custom_title") || (isSw ? "Kichwa cha Hadithi (Hiari)" : "Story Title (Optional)")}</p>
+              <Input
+                value={customTitle}
+                onChange={(e) => setCustomTitle(e.target.value)}
+                placeholder={isSw ? "mf. Daudi na Simba, Noa na Mafuriko..." : "e.g. David and the Lion, Noah and the Flood..."}
+                maxLength={80}
+              />
+              <p className="text-muted-foreground text-xs">
+                {isSw ? "Andika kichwa unachotaka au acha tupu kwa AI kuandika" : "Write your own title or leave blank for AI to decide"}
+              </p>
+            </div>
+
             <div className="flex gap-2">
               <Button onClick={() => setStep(2)} variant="outline" className="flex-1">{t("common.back")}</Button>
               <Button onClick={handleGenerate} className="flex-1 gap-2" size="lg">

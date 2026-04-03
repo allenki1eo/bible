@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Bible stories mapped to characters with real Scripture references
 const BIBLE_REFERENCES: Record<string, { en: string; sw: string; verses: string[] }> = {
   david: {
     en: "1 Samuel 17 (David and Goliath), Psalm 23 (The Lord is my Shepherd)",
@@ -29,7 +28,7 @@ const BIBLE_REFERENCES: Record<string, { en: string; sw: string; verses: string[
   },
   mary: {
     en: "Luke 1:38 (I am the Lord's servant), Luke 2:19 (Treasured in heart)",
-    sw: "Luka 1:38 (Mimi ni mtumishi wa BWF), Luka 2:19 (Aliyaficha moyoni)",
+    sw: "Luka 1:38 (Mimi ni mtumishi wa Bwana), Luka 2:19 (Aliyaficha moyoni)",
     verses: ["Luke 1:38", "Luke 2:19"],
   },
   moses: {
@@ -74,18 +73,119 @@ const BIBLE_REFERENCES: Record<string, { en: string; sw: string; verses: string[
   },
 };
 
-export async function POST(req: NextRequest) {
-  const groqKey = process.env.GROQ_API_KEY;
+async function generateSwahiliStory(systemPrompt: string, userPrompt: string, maxTokens: number): Promise<string | null> {
+  const hfKey = process.env.HUGGINGFACE_API_KEY;
 
-  if (!groqKey) {
-    return NextResponse.json(
-      { error: "GROQ_API_KEY not set. Add it to .env" },
-      { status: 500 }
-    );
+  if (hfKey) {
+    try {
+      const response = await fetch(
+        "https://router.huggingface.co/hf-inference/models/CohereForAI/aya-23-8b/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${hfKey}`,
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+            max_tokens: maxTokens,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content;
+      } else {
+        const errText = await response.text();
+        console.error("Aya-23 Swahili error:", response.status, errText);
+      }
+    } catch (err) {
+      console.error("Aya-23 Swahili fetch error:", err);
+    }
   }
 
+  // Fallback to Groq if HF unavailable
+  const groqKey = process.env.GROQ_API_KEY;
+  if (groqKey) {
+    try {
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${groqKey}`,
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.7,
+            max_tokens: maxTokens,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content) return content;
+      }
+    } catch (err) {
+      console.error("Groq Swahili fallback error:", err);
+    }
+  }
+
+  return null;
+}
+
+async function generateEnglishStory(systemPrompt: string, userPrompt: string, maxTokens: number): Promise<string | null> {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) return null;
+
   try {
-    const { hero, lesson, language, length } = await req.json();
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.6,
+          max_tokens: maxTokens,
+        }),
+      }
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    }
+  } catch (err) {
+    console.error("Groq English error:", err);
+  }
+
+  return null;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { hero, lesson, language, length, customTitle } = await req.json();
 
     const heroKey = hero?.toLowerCase().replace(/\s+/g, "") || "";
     const bibleRef = BIBLE_REFERENCES[heroKey] || {
@@ -97,6 +197,14 @@ export async function POST(req: NextRequest) {
     const refs = language === "sw" ? bibleRef.sw : bibleRef.en;
     const verseList = bibleRef.verses.join(", ");
     const wordCount = length === "short" ? "300" : "500";
+    const maxTokens = length === "short" ? 800 : 1200;
+
+    const titleInstruction = customTitle
+      ? `\n\nMUHIMU: Tumia kichwa hiki cha hadithi: "${customTitle}". Anza hadithi kwa kichwa hiki.`
+      : "";
+    const titleInstructionEn = customTitle
+      ? `\n\nIMPORTANT: Use this story title: "${customTitle}". Start the story with this title.`
+      : "";
 
     const systemPrompt =
       language === "sw"
@@ -110,13 +218,14 @@ ${refs}
 Vidokezo vya maandiko: ${verseList}
 
 MUONGOZO WA KUANDIKA:
-- Anza hadithi kwa sentensi 1-2 zinazovutia msomaji mdogo (mfano: "Zamani, katika nchi ya...", "Kulikuwa na mtoto mwenye...")
+- Anza hadithi kwa kichwa cha hadithi, kisha sentensi 1-2 zinazovutia msomaji mdogo (mfano: "Zamani, katika nchi ya...", "Kulikuwa na mtoto mwenye...")
 - Elezea matukio kwa mpangilio wa hadithi halisi ya Biblia - usibadilishe ukweli wa maandiko
 - Tumia maneno rahisi, ya Kiswahili sanifu ambayo mtoto wa miaka 5-10 anaweza kuelewa
 - Onyesha somo la "${lesson}" kupitia matendo na maneno ya wahusika, si kwa kuhubiri
 - Weka hisia na maelezo yanayomsaidia mtoto kujifunga na hadithi (mfano: "Daudi alihofika, lakini alimwamini Mungu")
 - Maliza kwa somo wazi na la kusisimua ambalo mtoto anaweza kutumia maishani mwake
 - Tumia mazungumzo kati ya wahusika ili hadithi iwe hai
+${titleInstruction}
 
 MUHIMU: Usitumie maneno magumu ya Kiarabu au Kiingereza. Tumia Kiswahili safi na rahisi.
 
@@ -131,66 +240,50 @@ ${refs}
 Scripture references: ${verseList}
 
 Write a TRUE Bible story, NOT fantasy or made-up fiction. Use the actual Biblical account of ${hero} to teach the lesson of "${lesson}". Keep the story faithful to Scripture while making it engaging for children.
+${titleInstructionEn}
 
 At the END of the story, add a "SCRIPTURE REFERENCES:" section listing the Bible verses used.
 
 Write in simple, warm language, about ${wordCount} words.`;
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content:
-                language === "sw"
-                  ? `Andika hadithi ya kibiblia inayovutia kuhusu ${hero} inayofundisha somo la "${lesson}". Anza kwa kichwa cha hadithi, kisha andika hadithi nzima kwa Kiswahili rahisi na cha kuvutia kwa watoto. Hakikisha hadithi inafuata ukweli wa Biblia na ina mwanzo, katikati, na mwisho wazi.`
-                  : `Write a Bible story about ${hero} teaching the lesson of ${lesson}.`,
-            },
-          ],
-          temperature: 0.6,
-          max_tokens: length === "short" ? 800 : 1200,
-        }),
-      }
-    );
+    const userPrompt =
+      language === "sw"
+        ? `Andika hadithi ya kibiblia inayovutia kuhusu ${hero} inayofundisha somo la "${lesson}". Anza kwa kichwa cha hadithi, kisha andika hadithi nzima kwa Kiswahili rahisi na cha kuvutia kwa watoto. Hakikisha hadithi inafuata ukweli wa Biblia na ina mwanzo, katikati, na mwisho wazi.`
+        : `Write a Bible story about ${hero} teaching the lesson of ${lesson}.`;
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Groq story error:", response.status, errText);
-      return NextResponse.json(
-        { error: `Groq API error: ${response.status}` },
-        { status: response.status }
-      );
+    let storyContent: string | null = null;
+
+    if (language === "sw") {
+      storyContent = await generateSwahiliStory(systemPrompt, userPrompt, maxTokens);
+    } else {
+      storyContent = await generateEnglishStory(systemPrompt, userPrompt, maxTokens);
     }
-
-    const data = await response.json();
-    const storyContent = data.choices?.[0]?.message?.content;
 
     if (!storyContent) {
       return NextResponse.json(
-        { error: "No content returned from Groq" },
+        { error: "Story generation failed. Check API keys (HUGGINGFACE_API_KEY for Swahili, GROQ_API_KEY for English)." },
         { status: 500 }
       );
     }
 
-    // Extract title from first line
-    const firstLine = storyContent
-      .split("\n")[0]
-      .replace(/^#+\s*/, "")
-      .replace(/["\u201C\u201D]/g, "")
-      .trim();
-    const title = firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine;
+    // Extract title: use custom title if provided, otherwise extract from first line
+    let title: string;
+    if (customTitle && customTitle.trim()) {
+      title = customTitle.trim();
+    } else {
+      const firstLine = storyContent
+        .split("\n")[0]
+        .replace(/^#+\s*/, "")
+        .replace(/["\u201C\u201D]/g, "")
+        .trim();
+      title = firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : firstLine;
+    }
 
-    // Extract scene description for image (first 2-3 sentences)
-    const sentences = storyContent.replace(/\n/g, " ").split(/[.!?]+/).filter((s: string) => s.trim().length > 10);
+    // Extract scene description for image (first 2-3 sentences after the title)
+    const contentWithoutTitle = storyContent.includes("\n")
+      ? storyContent.split("\n").slice(1).join(" ")
+      : storyContent;
+    const sentences = contentWithoutTitle.replace(/\n/g, " ").split(/[.!?]+/).filter((s: string) => s.trim().length > 10);
     const sceneDescription = sentences.slice(0, 3).join(". ").slice(0, 250);
 
     return NextResponse.json({

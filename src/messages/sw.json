@@ -116,7 +116,9 @@
       "kindness": "Wema",
       "forgiveness": "Msamaha",
       "honesty": "Uaminifu",
-      "faith": "Imani"
+      "faith": "Imani",
+      "obedience": "Utii",
+      "patience": "Uvumilivu"
     },
     "length": "Urefu wa Hadithi",
     "short": "Fupi (~300 maneno)",
@@ -134,7 +136,8 @@
     "saved": "Imehifadhiwa!",
     "new_story": "Hadithi Mpya",
     "library_title": "Maktaba ya Hadithi ya Familia",
-    "no_stories": "Hakuna hadithi zilizohifadhiwa bado. Tengeneza hadithi yako ya kwanza!"
+    "no_stories": "Hakuna hadithi zilizohifadhiwa bado. Tengeneza hadithi yako ya kwanza!",
+    "custom_title": "Kichwa cha Hadithi (Hiari)"
   },
   "profile": {
     "title": "Mipangilio",

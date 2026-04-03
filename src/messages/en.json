@@ -116,7 +116,9 @@
       "kindness": "Kindness",
       "forgiveness": "Forgiveness",
       "honesty": "Honesty",
-      "faith": "Faith"
+      "faith": "Faith",
+      "obedience": "Obedience",
+      "patience": "Patience"
     },
     "length": "Story Length",
     "short": "Short (~300 words)",
@@ -134,7 +136,8 @@
     "saved": "Saved!",
     "new_story": "New Story",
     "library_title": "Family Story Library",
-    "no_stories": "No saved stories yet. Create your first story!"
+    "no_stories": "No saved stories yet. Create your first story!",
+    "custom_title": "Story Title (Optional)"
   },
   "profile": {
     "title": "Settings",

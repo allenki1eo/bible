@@ -5,7 +5,7 @@ import { useLanguageStore } from "@/stores/language-store";
 
 const FLAGS: Record<string, string> = {
   en: "\uD83C\uDDEC\uD83C\uDDE7",
-  sw: "\uD83C\uDDF8\uD83C\uDDEA",
+  sw: "\uD83C\uDDF9\uD83C\uDDFF",
 };
 
 export function LanguageToggle() {

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-client-i18n";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+import { PWAInstallButton } from "@/components/pwa-install-button";
 
 const navItems = [
   { href: "/", icon: House, labelKey: "nav.home" },
@@ -91,6 +92,7 @@ export function TopBar({
           </h1>
         </div>
         <div className="flex items-center gap-1">
+          <PWAInstallButton />
           <LanguageToggle />
           <ThemeToggle />
           <Link

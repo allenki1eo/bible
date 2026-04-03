@@ -1,83 +1,128 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BIBLE_REFERENCES: Record<string, { en: string; sw: string; verses: string[] }> = {
+const BIBLE_REFERENCES: Record<string, {
+  en: string;
+  sw: string;
+  enVerses: { book: string; chapter: number; verse: number }[];
+  swVerses: { book: string; chapter: number; verse: number }[];
+}> = {
   david: {
     en: "1 Samuel 17 (David and Goliath), Psalm 23 (The Lord is my Shepherd)",
     sw: "1 Samweli 17 (Daudi na Goliathi), Zaburi 23 (BWANA ndiye mchungaji wangu)",
-    verses: ["1 Samuel 17:45", "Psalm 23:1", "Psalm 27:1"],
+    enVerses: [{ book: "1-samuel", chapter: 17, verse: 45 }, { book: "psalms", chapter: 23, verse: 1 }, { book: "psalms", chapter: 27, verse: 1 }],
+    swVerses: [{ book: "1-samuel", chapter: 17, verse: 45 }, { book: "psalms", chapter: 23, verse: 1 }, { book: "psalms", chapter: 27, verse: 1 }],
   },
   esther: {
     en: "Esther 4:14 (For such a time as this), Esther 2:17 (Finding favor)",
     sw: "Esther 4:14 (Kwa wakati kama huu), Esther 2:17 (Kupata upendeleo)",
-    verses: ["Esther 4:14", "Esther 2:17"],
+    enVerses: [{ book: "esther", chapter: 4, verse: 14 }, { book: "esther", chapter: 2, verse: 17 }],
+    swVerses: [{ book: "esther", chapter: 4, verse: 14 }, { book: "esther", chapter: 2, verse: 17 }],
   },
   daniel: {
     en: "Daniel 6 (The Lion's Den), Daniel 1 (Faithful in Babylon)",
     sw: "Danieli 6 (Tundu la Simba), Danieli 1 (Aliaminifu Babeli)",
-    verses: ["Daniel 6:22", "Daniel 1:8"],
+    enVerses: [{ book: "daniel", chapter: 6, verse: 22 }, { book: "daniel", chapter: 1, verse: 8 }],
+    swVerses: [{ book: "daniel", chapter: 6, verse: 22 }, { book: "daniel", chapter: 1, verse: 8 }],
   },
   ruth: {
     en: "Ruth 1:16 (Where you go I will go), Ruth 2:12 (Finding favor)",
     sw: "Ruthu 1:16 (Nenda utakapokwenda), Ruthu 2:12 (Kupata upendeleo)",
-    verses: ["Ruth 1:16", "Ruth 2:12"],
+    enVerses: [{ book: "ruth", chapter: 1, verse: 16 }, { book: "ruth", chapter: 2, verse: 12 }],
+    swVerses: [{ book: "ruth", chapter: 1, verse: 16 }, { book: "ruth", chapter: 2, verse: 12 }],
   },
   joseph: {
     en: "Genesis 37 (The coat of many colors), Genesis 50:20 (God meant it for good)",
     sw: "Mwanzo 37 (Mwanzo wa rangi nyingi), Mwanzo 50:20 (Mungu alilitegemeza kwa wema)",
-    verses: ["Genesis 37:3", "Genesis 50:20"],
+    enVerses: [{ book: "genesis", chapter: 37, verse: 3 }, { book: "genesis", chapter: 50, verse: 20 }],
+    swVerses: [{ book: "genesis", chapter: 37, verse: 3 }, { book: "genesis", chapter: 50, verse: 20 }],
   },
   mary: {
     en: "Luke 1:38 (I am the Lord's servant), Luke 2:19 (Treasured in heart)",
     sw: "Luka 1:38 (Mimi ni mtumishi wa Bwana), Luka 2:19 (Aliyaficha moyoni)",
-    verses: ["Luke 1:38", "Luke 2:19"],
+    enVerses: [{ book: "luke", chapter: 1, verse: 38 }, { book: "luke", chapter: 2, verse: 19 }],
+    swVerses: [{ book: "luke", chapter: 1, verse: 38 }, { book: "luke", chapter: 2, verse: 19 }],
   },
   moses: {
     en: "Exodus 3 (The burning bush), Exodus 14 (Parting the Red Sea)",
     sw: "Kutoka 3 (Mwali unaowaka), Kutoka 14 (Kugawa Bahari Nyekundu)",
-    verses: ["Exodus 3:14", "Exodus 14:21"],
+    enVerses: [{ book: "exodus", chapter: 3, verse: 14 }, { book: "exodus", chapter: 14, verse: 21 }],
+    swVerses: [{ book: "exodus", chapter: 3, verse: 14 }, { book: "exodus", chapter: 14, verse: 21 }],
   },
   noah: {
     en: "Genesis 6-9 (Building the ark, the flood, the rainbow)",
     sw: "Mwanzo 6-9 (Kujenga safina, mafuriko, upinde wa mvua)",
-    verses: ["Genesis 6:22", "Genesis 9:13"],
+    enVerses: [{ book: "genesis", chapter: 6, verse: 22 }, { book: "genesis", chapter: 9, verse: 13 }],
+    swVerses: [{ book: "genesis", chapter: 6, verse: 22 }, { book: "genesis", chapter: 9, verse: 13 }],
   },
   samson: {
     en: "Judges 13-16 (Samson's strength, dedication to God)",
     sw: "Waamuzi 13-16 (Nguvu ya Samsoni, kujitoa kwa Mungu)",
-    verses: ["Judges 16:28", "Judges 13:5"],
+    enVerses: [{ book: "judges", chapter: 16, verse: 28 }, { book: "judges", chapter: 13, verse: 5 }],
+    swVerses: [{ book: "judges", chapter: 16, verse: 28 }, { book: "judges", chapter: 13, verse: 5 }],
   },
   solomon: {
     en: "1 Kings 3 (Asking for wisdom), 1 Kings 10 (The queen of Sheba)",
     sw: "1 Wafalme 3 (Kuomba hekima), 1 Wafalme 10 (Malkia wa Sheba)",
-    verses: ["1 Kings 3:9", "Proverbs 1:7"],
+    enVerses: [{ book: "1-kings", chapter: 3, verse: 9 }, { book: "proverbs", chapter: 1, verse: 7 }],
+    swVerses: [{ book: "1-kings", chapter: 3, verse: 9 }, { book: "proverbs", chapter: 1, verse: 7 }],
   },
   paul: {
     en: "Acts 9 (Paul's conversion), Philippians 4:13 (Strength through Christ)",
     sw: "Matendo 9 (Ubadiliko wa Paulo), Wafilipi 4:13 (Nguvu kupitia Kristo)",
-    verses: ["Acts 9:3", "Philippians 4:13"],
+    enVerses: [{ book: "acts", chapter: 9, verse: 3 }, { book: "philippians", chapter: 4, verse: 13 }],
+    swVerses: [{ book: "acts", chapter: 9, verse: 3 }, { book: "philippians", chapter: 4, verse: 13 }],
   },
   peter: {
     en: "Matthew 14:29 (Walking on water), Acts 2 (Peter's sermon at Pentecost)",
     sw: "Mathayo 14:29 (Kutembea juu ya maji), Matendo 2 (Hotuba ya Petro Pentekoste)",
-    verses: ["Matthew 14:29", "Acts 2:14"],
+    enVerses: [{ book: "matthew", chapter: 14, verse: 29 }, { book: "acts", chapter: 2, verse: 14 }],
+    swVerses: [{ book: "matthew", chapter: 14, verse: 29 }, { book: "acts", chapter: 2, verse: 14 }],
   },
   abraham: {
     en: "Genesis 12 (Called to leave home), Genesis 22 (Willing to sacrifice Isaac)",
     sw: "Mwanzo 12 (Kuagwa kuacha nyumbani), Mwanzo 22 (Tayari kumtoa Isaka)",
-    verses: ["Genesis 12:1", "Genesis 22:8"],
+    enVerses: [{ book: "genesis", chapter: 12, verse: 1 }, { book: "genesis", chapter: 22, verse: 8 }],
+    swVerses: [{ book: "genesis", chapter: 12, verse: 1 }, { book: "genesis", chapter: 22, verse: 8 }],
   },
   hannah: {
     en: "1 Samuel 1 (Hannah's prayer for a child), 1 Samuel 2 (Song of Hannah)",
     sw: "1 Samweli 1 (Maombi ya Hanna kwa mtoto), 1 Samweli 2 (Wimbo wa Hanna)",
-    verses: ["1 Samuel 1:27", "1 Samuel 2:1"],
+    enVerses: [{ book: "1-samuel", chapter: 1, verse: 27 }, { book: "1-samuel", chapter: 2, verse: 1 }],
+    swVerses: [{ book: "1-samuel", chapter: 1, verse: 27 }, { book: "1-samuel", chapter: 2, verse: 1 }],
   },
 };
+
+async function fetchBibleVerse(version: string, book: string, chapter: number, verse: number): Promise<string | null> {
+  try {
+    const url = `https://cdn.jsdelivr.net/gh/wldeh/bible-api/bibles/${version}/books/${book}/chapters/${chapter}/verses/${verse}.json`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      return data.text || null;
+    }
+  } catch {
+    // Silently fail -- we'll just use the reference without the text
+  }
+  return null;
+}
+
+async function fetchVerses(verses: { book: string; chapter: number; verse: number }[], version: string): Promise<string[]> {
+  const results = await Promise.all(
+    verses.map(async (v) => {
+      const text = await fetchBibleVerse(version, v.book, v.chapter, v.verse);
+      if (text) {
+        return `"${text}" (${v.book} ${v.chapter}:${v.verse})`;
+      }
+      return null;
+    })
+  );
+  return results.filter((r): r is string => r !== null);
+}
 
 async function generateSwahiliStory(systemPrompt: string, userPrompt: string, maxTokens: number): Promise<string | null> {
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) return null;
 
-  // Try multiple Gemma model IDs in case one is unavailable
   const models = [
     "google/gemma-2-9b-it",
     "gemma2-9b-it",
@@ -122,7 +167,6 @@ async function generateSwahiliStory(systemPrompt: string, userPrompt: string, ma
     }
   }
 
-  // Final fallback: llama-3.1-8b-instant
   console.log("Falling back to llama-3.1-8b-instant for Swahili");
   try {
     const response = await fetch(
@@ -204,13 +248,26 @@ export async function POST(req: NextRequest) {
     const bibleRef = BIBLE_REFERENCES[heroKey] || {
       en: `Stories from the Bible featuring ${hero}`,
       sw: `Hadithi za Biblia zinazomhusu ${hero}`,
-      verses: ["Proverbs 22:6"],
+      enVerses: [{ book: "proverbs", chapter: 22, verse: 6 }],
+      swVerses: [{ book: "methali", chapter: 22, verse: 6 }],
     };
 
     const refs = language === "sw" ? bibleRef.sw : bibleRef.en;
-    const verseList = bibleRef.verses.join(", ");
+    const verses = language === "sw" ? bibleRef.swVerses : bibleRef.enVerses;
+    const verseList = verses.map((v) => `${v.chapter}:${v.verse}`).join(", ");
     const wordCount = length === "short" ? "300" : "500";
     const maxTokens = length === "short" ? 800 : 1200;
+
+    // Fetch actual Bible verse text from the free Bible API
+    const version = language === "sw" ? "swh_bib" : "en-kjv";
+    const fetchedVerses = await fetchVerses(verses, version);
+    const verseTextBlock = fetchedVerses.length > 0
+      ? `\n\nHII NI MANENO HALISI YA MAANDIKO ( soma na utumie kama msingi wa hadithi yako):\n${fetchedVerses.join("\n")}`
+      : `\n\nSCRIPTURE REFERENCES: ${verseList}`;
+
+    const verseTextBlockEn = fetchedVerses.length > 0
+      ? `\n\nHERE ARE THE ACTUAL SCRIPTURE TEXTS (read and use as the foundation for your story):\n${fetchedVerses.join("\n")}`
+      : `\n\nSCRIPTURE REFERENCES: ${verseList}`;
 
     const titleInstruction = customTitle
       ? `\n\nMUHIMU: Tumia kichwa hiki cha hadithi: "${customTitle}". Anza hadithi kwa kichwa hiki.`
@@ -225,10 +282,11 @@ export async function POST(req: NextRequest) {
 
 MUHIMU SANA:
 1. Hadithi lazima iwe HALISI kutoka Biblia - si hadithi ya kubuni (fantasy) au hadithi ya kufikirika.
-2. Tumia maandiko haya kama msingi wa hadithi yako:
+2. Rejelea maandiko haya kama msingi wa hadithi yako:
 ${refs}
 
 Vidokezo vya maandiko: ${verseList}
+${verseTextBlock}
 
 MUONGOZO WA KUANDIKA:
 - Anza hadithi kwa kichwa cha hadithi, kisha sentensi 1-2 zinazovutia msomaji mdogo (mfano: "Zamani, katika nchi ya...", "Kulikuwa na mtoto mwenye...")
@@ -251,6 +309,7 @@ IMPORTANT: The story MUST be based on REAL Scripture. Please read and reference 
 ${refs}
 
 Scripture references: ${verseList}
+${verseTextBlockEn}
 
 Write a TRUE Bible story, NOT fantasy or made-up fiction. Use the actual Biblical account of ${hero} to teach the lesson of "${lesson}". Keep the story faithful to Scripture while making it engaging for children.
 ${titleInstructionEn}
@@ -303,7 +362,7 @@ Write in simple, warm language, about ${wordCount} words.`;
       title,
       content: storyContent,
       sceneDescription,
-      scriptureRefs: verseList,
+      scriptureRefs: refs,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";

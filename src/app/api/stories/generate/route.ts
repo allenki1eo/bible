@@ -100,18 +100,29 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt =
       language === "sw"
-        ? `Wewe ni mwandishi wa hadithi za Biblia kwa watoto wa umri wa miaka 5-10.
+        ? `Wewe ni mwandishi bora wa hadithi za Biblia kwa watoto wa umri wa miaka 5-10. Kazi yako ni kuandika hadithi za kuvutia, rahisi kuelewa, na zinazofundisha maadili kutoka Maandiko Matakatifu.
 
-MUHIMU: Hadithi lazima iwe KATIKA MAANDIKO MATAKATIFU ya Biblia. Tafadhali soma na urejelee maandiko haya kabla ya kuandika:
+MUHIMU SANA:
+1. Hadithi lazima iwe HALISI kutoka Biblia - si hadithi ya kubuni (fantasy) au hadithi ya kufikirika.
+2. Tumia maandiko haya kama msingi wa hadithi yako:
 ${refs}
 
 Vidokezo vya maandiko: ${verseList}
 
-ANDIKA HADITHI halisi kutoka Biblia, si hadithi ya ufundi (fantasy). Tumia ukweli wa kibiblia. Onyesha somo la "${lesson}" kupitia hadithi halisi ya ${hero}.
+MUONGOZO WA KUANDIKA:
+- Anza hadithi kwa sentensi 1-2 zinazovutia msomaji mdogo (mfano: "Zamani, katika nchi ya...", "Kulikuwa na mtoto mwenye...")
+- Elezea matukio kwa mpangilio wa hadithi halisi ya Biblia - usibadilishe ukweli wa maandiko
+- Tumia maneno rahisi, ya Kiswahili sanifu ambayo mtoto wa miaka 5-10 anaweza kuelewa
+- Onyesha somo la "${lesson}" kupitia matendo na maneno ya wahusika, si kwa kuhubiri
+- Weka hisia na maelezo yanayomsaidia mtoto kujifunga na hadithi (mfano: "Daudi alihofika, lakini alimwamini Mungu")
+- Maliza kwa somo wazi na la kusisimua ambalo mtoto anaweza kutumia maishani mwake
+- Tumia mazungumzo kati ya wahusika ili hadithi iwe hai
+
+MUHIMU: Usitumie maneno magumu ya Kiarabu au Kiingereza. Tumia Kiswahili safi na rahisi.
 
 MWISHO wa hadithi, ongeza sehemu ya "MAANDIKO:" yenye vidokezo vya Biblia vilivyotumika.
 
-Andika kwa Kiswahili rahisi, ${wordCount} maneno.`
+Andika kwa Kiswahili rahisi na cha kuvutia, takriban ${wordCount} maneno.`
         : `You are a Bible story writer for children ages 5-10.
 
 IMPORTANT: The story MUST be based on REAL Scripture. Please read and reference these Bible passages before writing:
@@ -141,7 +152,7 @@ Write in simple, warm language, about ${wordCount} words.`;
               role: "user",
               content:
                 language === "sw"
-                  ? `Andika hadithi ya kibiblia kuhusu ${hero} kuhusu somo la ${lesson}.`
+                  ? `Andika hadithi ya kibiblia inayovutia kuhusu ${hero} inayofundisha somo la "${lesson}". Anza kwa kichwa cha hadithi, kisha andika hadithi nzima kwa Kiswahili rahisi na cha kuvutia kwa watoto. Hakikisha hadithi inafuata ukweli wa Biblia na ina mwanzo, katikati, na mwisho wazi.`
                   : `Write a Bible story about ${hero} teaching the lesson of ${lesson}.`,
             },
           ],

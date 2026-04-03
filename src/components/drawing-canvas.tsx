@@ -10,6 +10,8 @@ import {
   Hand,
   PencilSimple,
   Eraser,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
 } from "@phosphor-icons/react";
 
 const COLORS = [
@@ -46,8 +48,12 @@ export function DrawingCanvas({
   const [isEraser, setIsEraser] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+
+  const CANVAS_WIDTH = 800;
+  const CANVAS_HEIGHT = 600;
 
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -55,23 +61,30 @@ export function DrawingCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const cw = Math.max(window.innerWidth, 800);
-    const ch = Math.max(window.innerHeight - 140, 600);
-
-    canvas.width = cw;
-    canvas.height = ch;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
 
     // Fill white first
     ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, cw, ch);
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     if (backgroundImage) {
       const img = new Image();
       img.onload = () => {
-        const scale = Math.min(cw / img.width, ch / img.height);
-        const x = (cw - img.width * scale) / 2;
-        const y = (ch - img.height * scale) / 2;
+        // Scale image to fit canvas while maintaining aspect ratio
+        const scale = Math.min(CANVAS_WIDTH / img.width, CANVAS_HEIGHT / img.height);
+        const x = (CANVAS_WIDTH - img.width * scale) / 2;
+        const y = (CANVAS_HEIGHT - img.height * scale) / 2;
+
+        // Draw image as a locked background (draw it first, then drawing happens on top)
+        ctx.globalAlpha = 0.4; // Make background slightly transparent so child's drawing stands out
         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        ctx.globalAlpha = 1.0;
+
+        // Draw a subtle border around the image area to give a "frame" feel
+        ctx.strokeStyle = "rgba(0,0,0,0.1)";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, img.width * scale, img.height * scale);
       };
       img.src = backgroundImage;
     }
@@ -79,12 +92,16 @@ export function DrawingCanvas({
 
   useEffect(() => {
     if (isOpen) {
+      setZoom(1);
+      setIsPanning(false);
+      setIsEraser(false);
+      setHasDrawn(false);
       const timer = setTimeout(initCanvas, 150);
       return () => clearTimeout(timer);
     }
   }, [isOpen, initCanvas]);
 
-  // Get canvas-relative coordinates (accounts for scroll)
+  // Get canvas-relative coordinates (accounts for zoom and scroll)
   const getCanvasPos = useCallback((clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -92,10 +109,10 @@ export function DrawingCanvas({
 
     const rect = canvas.getBoundingClientRect();
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: (clientX - rect.left) / zoom,
+      y: (clientY - rect.top) / zoom,
     };
-  }, []);
+  }, [zoom]);
 
   const handlePointerDown = useCallback(
     (e: React.MouseEvent | React.TouchEvent) => {
@@ -189,6 +206,7 @@ export function DrawingCanvas({
 
   const clearCanvas = () => {
     initCanvas();
+    setHasDrawn(false);
   };
 
   const downloadCanvas = () => {
@@ -200,6 +218,14 @@ export function DrawingCanvas({
     link.click();
   };
 
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -209,12 +235,15 @@ export function DrawingCanvas({
         <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9">
           <X size={20} />
         </Button>
+
         <div className="flex items-center gap-1">
+          {/* Drawing Tools */}
           <Button
-            variant={!isPanning ? "default" : "ghost"}
+            variant={!isPanning && !isEraser ? "default" : "ghost"}
             size="icon"
             onClick={() => { setIsPanning(false); setIsEraser(false); }}
             className="h-9 w-9"
+            title="Pencil"
           >
             <PencilSimple size={18} />
           </Button>
@@ -223,38 +252,58 @@ export function DrawingCanvas({
             size="icon"
             onClick={() => { setIsPanning(true); setIsEraser(false); }}
             className="h-9 w-9"
+            title="Move/Pan"
           >
             <Hand size={18} />
           </Button>
           <Button
-            variant={isEraser && !isPanning ? "default" : "ghost"}
+            variant={isEraser ? "default" : "ghost"}
             size="icon"
             onClick={() => { setIsEraser(true); setIsPanning(false); }}
             className="h-9 w-9"
+            title="Eraser"
           >
             <Eraser size={18} />
           </Button>
         </div>
+
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={clearCanvas} className="h-9 w-9">
+          {/* Zoom Controls */}
+          <Button variant="ghost" size="icon" onClick={handleZoomOut} className="h-9 w-9" title="Zoom Out">
+            <MagnifyingGlassMinus size={18} />
+          </Button>
+          <span className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</span>
+          <Button variant="ghost" size="icon" onClick={handleZoomIn} className="h-9 w-9" title="Zoom In">
+            <MagnifyingGlassPlus size={18} />
+          </Button>
+
+          {/* Clear & Download */}
+          <Button variant="ghost" size="icon" onClick={clearCanvas} className="h-9 w-9" title="Clear Drawing">
             <ArrowCounterClockwise size={18} />
           </Button>
-          <Button variant="ghost" size="icon" onClick={downloadCanvas} className="h-9 w-9">
+          <Button variant="ghost" size="icon" onClick={downloadCanvas} className="h-9 w-9" title="Download">
             <Download size={18} />
           </Button>
         </div>
       </div>
 
-      {/* Scrollable Canvas Area */}
+      {/* Canvas Area - Fixed size, locked background image */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-100"
+        className="flex-1 overflow-auto bg-gray-100 flex items-center justify-center"
         style={{ cursor: isPanning ? "grab" : "crosshair" }}
       >
         <canvas
           ref={canvasRef}
-          className="block touch-none"
-          style={{ display: "block" }}
+          className="block touch-none shadow-lg"
+          style={{
+            display: "block",
+            width: CANVAS_WIDTH * zoom,
+            height: CANVAS_HEIGHT * zoom,
+            minWidth: CANVAS_WIDTH * zoom,
+            minHeight: CANVAS_HEIGHT * zoom,
+            imageRendering: "auto",
+          }}
           onMouseDown={handlePointerDown}
           onMouseMove={handlePointerMove}
           onMouseUp={handlePointerUp}

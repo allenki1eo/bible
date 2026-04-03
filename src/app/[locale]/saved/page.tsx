@@ -25,9 +25,9 @@ export default function SavedPage() {
   const router = useRouter();
   const isSw = locale === "sw";
 
-  const [stories, setStories] = useState([]);
-  const [devotions, setDevotions] = useState([]);
-  const [prayers, setPrayers] = useState([]);
+  const [stories, setStories] = useState<{ id: string; title: string; hero: string; lesson: string; created_at: string }[]>([]);
+  const [devotions, setDevotions] = useState<{ id: string; date: string; mood: string; completed: boolean }[]>([]);
+  const [prayers, setPrayers] = useState<{ id: string; encrypted_content: string; status: string; created_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAll = useCallback(async () => {

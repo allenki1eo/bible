@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nuru — Offline</title>
+  <link rel="icon" href="/logos/light.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#09090b" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #09090b;
+      color: #fafafa;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      text-align: center;
+      padding: 2rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    h1 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 1.875rem;
+      font-weight: 400;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.875rem;
+      line-height: 1.5;
+      max-width: 320px;
+      margin-bottom: 2rem;
+    }
+
+    .wifi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .wifi-icon svg {
+      width: 24px;
+      height: 24px;
+      stroke: rgba(255, 255, 255, 0.3);
+    }
+
+    .verse {
+      margin-top: 1rem;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      max-width: 400px;
+    }
+
+    .verse p {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-style: italic;
+      font-size: 1.1rem;
+      line-height: 1.7;
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .verse cite {
+      display: block;
+      margin-top: 0.75rem;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.8125rem;
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .retry-btn {
+      margin-top: 2rem;
+      padding: 0.625rem 1.5rem;
+      border-radius: 0.5rem;
+      background: #fafafa;
+      color: #09090b;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    .retry-btn:active {
+      transform: scale(0.96);
+    }
+
+    .divider {
+      width: 48px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+      margin: 1.5rem auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="logo">
+    <img src="/logos/light.png" alt="Nuru" />
+  </div>
+
+  <div class="wifi-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+    </svg>
+  </div>
+
+  <h1>You're Offline</h1>
+  <p class="subtitle">Don't worry — your faith doesn't need WiFi. Check your connection and try again.</p>
+
+  <div class="divider"></div>
+
+  <div class="verse">
+    <p>"Be still, and know that I am God."</p>
+    <cite>— Psalm 46:10</cite>
+  </div>
+
+  <button class="retry-btn" onclick="window.location.reload()">Try Again</button>
+</body>
+</html>

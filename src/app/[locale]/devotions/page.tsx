@@ -350,7 +350,7 @@ export default function DevotionsPage() {
 
               {/* Week dots */}
               <div className="flex justify-between items-center mt-4 pt-4 border-t">
-                {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
+                {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((day, i) => (
                   <div key={i} className="flex flex-col items-center gap-1.5">
                     <span className="text-[10px] text-muted-foreground">{day}</span>
                     <div

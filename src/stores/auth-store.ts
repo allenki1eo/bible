@@ -167,18 +167,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Check for guest
       const guestData = localStorage.getItem("faithflow_guest");
       if (guestData) {
-        const guest = JSON.parse(guestData);
-        set({
-          user: {
-            id: guest.id,
-            email: "",
-            displayName: "Guest",
-            avatarUrl: null,
-            language: "en",
-            isGuest: true,
-          },
-          loading: false,
-        });
+        try {
+          const guest = JSON.parse(guestData);
+          set({
+            user: {
+              id: guest.id,
+              email: "",
+              displayName: "Guest",
+              avatarUrl: null,
+              language: "en",
+              isGuest: true,
+            },
+            loading: false,
+          });
+        } catch {
+          localStorage.removeItem("faithflow_guest");
+          set({ user: null, loading: false });
+        }
       } else {
         set({ user: null, loading: false });
       }
@@ -210,18 +215,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         const guestData = localStorage.getItem("faithflow_guest");
         if (guestData) {
-          const guest = JSON.parse(guestData);
-          set({
-            user: {
-              id: guest.id,
-              email: "",
-              displayName: "Guest",
-              avatarUrl: null,
-              language: "en",
-              isGuest: true,
-            },
-            loading: false,
-          });
+          try {
+            const guest = JSON.parse(guestData);
+            set({
+              user: {
+                id: guest.id,
+                email: "",
+                displayName: "Guest",
+                avatarUrl: null,
+                language: "en",
+                isGuest: true,
+              },
+              loading: false,
+            });
+          } catch {
+            localStorage.removeItem("faithflow_guest");
+            set({ user: null, loading: false });
+          }
         } else {
           set({ user: null, loading: false });
         }
@@ -230,11 +240,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Supabase connection failed - check for guest
       const guestData = localStorage.getItem("faithflow_guest");
       if (guestData) {
-        const guest = JSON.parse(guestData);
-        set({
-          user: { id: guest.id, email: "", displayName: "Guest", avatarUrl: null, language: "en", isGuest: true },
-          loading: false,
-        });
+        try {
+          const guest = JSON.parse(guestData);
+          set({
+            user: { id: guest.id, email: "", displayName: "Guest", avatarUrl: null, language: "en", isGuest: true },
+            loading: false,
+          });
+        } catch {
+          localStorage.removeItem("faithflow_guest");
+          set({ user: null, loading: false });
+        }
       } else {
         set({ user: null, loading: false });
       }

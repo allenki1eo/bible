@@ -4,30 +4,33 @@ import { useRef, useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   X,
-  Trash,
-  Download,
   ArrowCounterClockwise,
-  Hand,
+  Download,
   PencilSimple,
   Eraser,
-  MagnifyingGlassPlus,
-  MagnifyingGlassMinus,
+  Star,
+  Heart,
+  SmileyWink,
 } from "@phosphor-icons/react";
 
+// Kid-friendly bright palette
 const COLORS = [
-  "#000000",
-  "#EF4444",
-  "#3B82F6",
-  "#22C55E",
-  "#EAB308",
-  "#A855F7",
-  "#F97316",
-  "#EC4899",
-  "#6B7280",
-  "#FFFFFF",
+  "#FF3B30", // red
+  "#FF9500", // orange
+  "#FFCC00", // yellow
+  "#34C759", // green
+  "#007AFF", // blue
+  "#5856D6", // purple
+  "#FF2D55", // pink
+  "#AF52DE", // violet
+  "#8B4513", // brown
+  "#000000", // black
+  "#FFFFFF", // white
 ];
 
-const SIZES = [3, 6, 12, 20];
+const BRUSH_SIZES = [4, 8, 16, 28];
+
+type Tool = "pen" | "eraser" | "stamp-star" | "stamp-heart" | "stamp-cross";
 
 interface DrawingCanvasProps {
   isOpen: boolean;
@@ -35,319 +38,342 @@ interface DrawingCanvasProps {
   backgroundImage?: string | null;
 }
 
-export function DrawingCanvas({
-  isOpen,
-  onClose,
-  backgroundImage,
-}: DrawingCanvasProps) {
+function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, color: string) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+    const innerAngle = angle + (2 * Math.PI) / 10;
+    const x = cx + Math.cos(angle) * size;
+    const y = cy + Math.sin(angle) * size;
+    const ix = cx + Math.cos(innerAngle) * size * 0.4;
+    const iy = cy + Math.sin(innerAngle) * size * 0.4;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    ctx.lineTo(ix, iy);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHeart(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, color: string) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  const s = size * 0.9;
+  ctx.moveTo(cx, cy + s * 0.3);
+  ctx.bezierCurveTo(cx, cy - s * 0.2, cx - s, cy - s * 0.2, cx - s, cy + s * 0.3);
+  ctx.bezierCurveTo(cx - s, cy + s * 0.8, cx, cy + s * 1.2, cx, cy + s * 1.2);
+  ctx.bezierCurveTo(cx, cy + s * 1.2, cx + s, cy + s * 0.8, cx + s, cy + s * 0.3);
+  ctx.bezierCurveTo(cx + s, cy - s * 0.2, cx, cy - s * 0.2, cx, cy + s * 0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCross(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number, color: string) {
+  ctx.save();
+  ctx.fillStyle = color;
+  const arm = size * 0.3;
+  ctx.beginPath();
+  // Vertical bar
+  ctx.rect(cx - arm, cy - size, arm * 2, size * 2);
+  ctx.fill();
+  // Horizontal bar (positioned in upper third of vertical bar)
+  ctx.beginPath();
+  ctx.rect(cx - size, cy - size * 0.4, size * 2, arm * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+export function DrawingCanvas({ isOpen, onClose, backgroundImage }: DrawingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState("#000000");
-  const [brushSize, setBrushSize] = useState(6);
-  const [isEraser, setIsEraser] = useState(false);
-  const [isPanning, setIsPanning] = useState(false);
-  const [hasDrawn, setHasDrawn] = useState(false);
-  const [zoom, setZoom] = useState(1);
+  const [color, setColor] = useState("#007AFF");
+  const [brushSize, setBrushSize] = useState(8);
+  const [tool, setTool] = useState<Tool>("pen");
+  const [stampSize, setStampSize] = useState(24);
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
 
-  const CANVAS_WIDTH = 800;
-  const CANVAS_HEIGHT = 600;
+  // Physical canvas logical dimensions (set once per open)
+  const canvasDimsRef = useRef<{ w: number; h: number; dpr: number }>({ w: 0, h: 0, dpr: 1 });
+
+  const getCanvasCoords = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const { dpr } = canvasDimsRef.current;
+    return {
+      x: ((clientX - rect.left) / rect.width) * (canvas.width / dpr),
+      y: ((clientY - rect.top) / rect.height) * (canvas.height / dpr),
+    };
+  }, []);
 
   const initCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = CANVAS_WIDTH;
-    canvas.height = CANVAS_HEIGHT;
+    const dpr = window.devicePixelRatio || 1;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
 
-    // Fill white first
-    ctx.fillStyle = "#FFFFFF";
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    canvasDimsRef.current = { w, h, dpr };
+
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${h}px`;
+    ctx.scale(dpr, dpr);
+
+    // Warm cream background
+    ctx.fillStyle = "#FFFBEB";
+    ctx.fillRect(0, 0, w, h);
 
     if (backgroundImage) {
       const img = new Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
-        // Scale image to fit canvas while maintaining aspect ratio
-        const scale = Math.min(CANVAS_WIDTH / img.width, CANVAS_HEIGHT / img.height);
-        const x = (CANVAS_WIDTH - img.width * scale) / 2;
-        const y = (CANVAS_HEIGHT - img.height * scale) / 2;
-
-        // Draw image as a locked background (draw it first, then drawing happens on top)
-        ctx.globalAlpha = 0.4; // Make background slightly transparent so child's drawing stands out
+        const scale = Math.min(w / img.width, h / img.height) * 0.95;
+        const x = (w - img.width * scale) / 2;
+        const y = (h - img.height * scale) / 2;
+        ctx.globalAlpha = 0.3;
         ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-        ctx.globalAlpha = 1.0;
-
-        // Draw a subtle border around the image area to give a "frame" feel
-        ctx.strokeStyle = "rgba(0,0,0,0.1)";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, img.width * scale, img.height * scale);
+        ctx.globalAlpha = 1;
       };
       img.src = backgroundImage;
     }
   }, [backgroundImage]);
 
   useEffect(() => {
-    if (isOpen) {
-      setZoom(1);
-      setIsPanning(false);
-      setIsEraser(false);
-      setHasDrawn(false);
-      const timer = setTimeout(initCanvas, 150);
-      return () => clearTimeout(timer);
-    }
+    if (!isOpen) return;
+    setTool("pen");
+    setColor("#007AFF");
+    setBrushSize(8);
+    // Wait for the DOM to be ready + the flex container to size itself
+    const timer = setTimeout(initCanvas, 100);
+    return () => clearTimeout(timer);
   }, [isOpen, initCanvas]);
 
-  // Get canvas-relative coordinates (accounts for zoom and scroll)
-  const getCanvasPos = useCallback((clientX: number, clientY: number) => {
+  const applyStamp = useCallback((x: number, y: number) => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return { x: 0, y: 0 };
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    if (tool === "stamp-star") drawStar(ctx, x, y, stampSize, color);
+    if (tool === "stamp-heart") drawHeart(ctx, x, y - stampSize * 0.4, stampSize, color);
+    if (tool === "stamp-cross") drawCross(ctx, x, y, stampSize, color);
+  }, [tool, color, stampSize]);
 
-    const rect = canvas.getBoundingClientRect();
-    return {
-      x: (clientX - rect.left) / zoom,
-      y: (clientY - rect.top) / zoom,
-    };
-  }, [zoom]);
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    const pos = getCanvasCoords(e.clientX, e.clientY);
 
-  const handlePointerDown = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
-      e.preventDefault();
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    if (tool === "stamp-star" || tool === "stamp-heart" || tool === "stamp-cross") {
+      applyStamp(pos.x, pos.y);
+      return;
+    }
 
-      if (isPanning) {
-        const container = containerRef.current;
-        if (!container) return;
-        panStartRef.current = {
-          x: clientX,
-          y: clientY,
-          scrollLeft: container.scrollLeft,
-          scrollTop: container.scrollTop,
-        };
-        return;
-      }
+    setIsDrawing(true);
+    lastPosRef.current = pos;
 
-      setIsDrawing(true);
-      setHasDrawn(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, (tool === "eraser" ? brushSize * 2 : brushSize) / 2, 0, Math.PI * 2);
+    ctx.fillStyle = tool === "eraser" ? "#FFFBEB" : color;
+    ctx.fill();
+  }, [tool, brushSize, color, getCanvasCoords, applyStamp]);
 
-      const pos = getCanvasPos(clientX, clientY);
-      lastPosRef.current = pos;
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    if (!isDrawing || !lastPosRef.current) return;
+    if (tool === "stamp-star" || tool === "stamp-heart" || tool === "stamp-cross") return;
 
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
-      ctx.strokeStyle = isEraser ? "#FFFFFF" : color;
-      ctx.lineWidth = isEraser ? brushSize * 3 : brushSize;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-      // Draw a dot for single clicks
-      ctx.lineTo(pos.x + 0.1, pos.y + 0.1);
-      ctx.stroke();
-    },
-    [isPanning, isEraser, color, brushSize, getCanvasPos]
-  );
+    const pos = getCanvasCoords(e.clientX, e.clientY);
+    const effectiveSize = tool === "eraser" ? brushSize * 2 : brushSize;
 
-  const handlePointerMove = useCallback(
-    (e: React.MouseEvent | React.TouchEvent) => {
-      e.preventDefault();
+    ctx.beginPath();
+    ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = tool === "eraser" ? "#FFFBEB" : color;
+    ctx.lineWidth = effectiveSize;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.stroke();
 
-      if (isPanning && panStartRef.current) {
-        const container = containerRef.current;
-        if (!container) return;
-        const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-        const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-        const dx = clientX - panStartRef.current.x;
-        const dy = clientY - panStartRef.current.y;
-        container.scrollLeft = panStartRef.current.scrollLeft - dx;
-        container.scrollTop = panStartRef.current.scrollTop - dy;
-        return;
-      }
-
-      if (!isDrawing || !lastPosRef.current) return;
-
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-      const pos = getCanvasPos(clientX, clientY);
-
-      ctx.beginPath();
-      ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.strokeStyle = isEraser ? "#FFFFFF" : color;
-      ctx.lineWidth = isEraser ? brushSize * 3 : brushSize;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.stroke();
-
-      lastPosRef.current = pos;
-    },
-    [isPanning, isDrawing, isEraser, color, brushSize, getCanvasPos]
-  );
+    lastPosRef.current = pos;
+  }, [isDrawing, tool, brushSize, color, getCanvasCoords]);
 
   const handlePointerUp = useCallback(() => {
     setIsDrawing(false);
     lastPosRef.current = null;
-    panStartRef.current = null;
   }, []);
 
-  const clearCanvas = () => {
+  const clearCanvas = useCallback(() => {
     initCanvas();
-    setHasDrawn(false);
-  };
+  }, [initCanvas]);
 
   const downloadCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement("a");
-    link.download = "faithflow-drawing.png";
+    link.download = "nuru-drawing.png";
     link.href = canvas.toDataURL("image/png");
     link.click();
   };
 
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.25, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 0.25, 0.5));
-  };
-
   if (!isOpen) return null;
 
+  const isStamp = tool === "stamp-star" || tool === "stamp-heart" || tool === "stamp-cross";
+
   return (
-    <div className="fixed inset-0 z-[100] bg-background flex flex-col">
-      {/* Top Bar */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-background/95 backdrop-blur shrink-0">
-        <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9">
+    <div className="fixed inset-0 z-[100] bg-amber-50 flex flex-col select-none">
+      {/* ── Top bar ── */}
+      <div className="flex items-center justify-between px-3 py-2 bg-white border-b shadow-sm shrink-0 gap-2">
+        <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 shrink-0">
           <X size={20} />
         </Button>
 
+        {/* Drawing tools */}
         <div className="flex items-center gap-1">
-          {/* Drawing Tools */}
-          <Button
-            variant={!isPanning && !isEraser ? "default" : "ghost"}
-            size="icon"
-            onClick={() => { setIsPanning(false); setIsEraser(false); }}
-            className="h-9 w-9"
+          <button
+            onClick={() => setTool("pen")}
             title="Pencil"
+            className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${tool === "pen" ? "bg-blue-100 text-blue-600 ring-2 ring-blue-400" : "text-gray-500 hover:bg-gray-100"}`}
           >
-            <PencilSimple size={18} />
-          </Button>
-          <Button
-            variant={isPanning ? "default" : "ghost"}
-            size="icon"
-            onClick={() => { setIsPanning(true); setIsEraser(false); }}
-            className="h-9 w-9"
-            title="Move/Pan"
-          >
-            <Hand size={18} />
-          </Button>
-          <Button
-            variant={isEraser ? "default" : "ghost"}
-            size="icon"
-            onClick={() => { setIsEraser(true); setIsPanning(false); }}
-            className="h-9 w-9"
+            <PencilSimple size={20} weight={tool === "pen" ? "fill" : "regular"} />
+          </button>
+          <button
+            onClick={() => setTool("eraser")}
             title="Eraser"
+            className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${tool === "eraser" ? "bg-gray-100 text-gray-800 ring-2 ring-gray-400" : "text-gray-500 hover:bg-gray-100"}`}
           >
-            <Eraser size={18} />
-          </Button>
+            <Eraser size={20} weight={tool === "eraser" ? "fill" : "regular"} />
+          </button>
+
+          {/* Stamp tools */}
+          <button
+            onClick={() => setTool("stamp-star")}
+            title="Star stamp"
+            className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${tool === "stamp-star" ? "bg-yellow-100 text-yellow-600 ring-2 ring-yellow-400" : "text-gray-500 hover:bg-gray-100"}`}
+          >
+            <Star size={20} weight={tool === "stamp-star" ? "fill" : "regular"} />
+          </button>
+          <button
+            onClick={() => setTool("stamp-heart")}
+            title="Heart stamp"
+            className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${tool === "stamp-heart" ? "bg-pink-100 text-pink-600 ring-2 ring-pink-400" : "text-gray-500 hover:bg-gray-100"}`}
+          >
+            <Heart size={20} weight={tool === "stamp-heart" ? "fill" : "regular"} />
+          </button>
+          <button
+            onClick={() => setTool("stamp-cross")}
+            title="Cross stamp"
+            className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${tool === "stamp-cross" ? "bg-purple-100 text-purple-600 ring-2 ring-purple-400" : "text-gray-500 hover:bg-gray-100"}`}
+          >
+            <SmileyWink size={20} weight={tool === "stamp-cross" ? "fill" : "regular"} />
+          </button>
         </div>
 
-        <div className="flex items-center gap-1">
-          {/* Zoom Controls */}
-          <Button variant="ghost" size="icon" onClick={handleZoomOut} className="h-9 w-9" title="Zoom Out">
-            <MagnifyingGlassMinus size={18} />
-          </Button>
-          <span className="text-xs text-muted-foreground w-10 text-center">{Math.round(zoom * 100)}%</span>
-          <Button variant="ghost" size="icon" onClick={handleZoomIn} className="h-9 w-9" title="Zoom In">
-            <MagnifyingGlassPlus size={18} />
-          </Button>
-
-          {/* Clear & Download */}
-          <Button variant="ghost" size="icon" onClick={clearCanvas} className="h-9 w-9" title="Clear Drawing">
+        {/* Actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="ghost" size="icon" onClick={clearCanvas} className="h-9 w-9" title="Clear">
             <ArrowCounterClockwise size={18} />
           </Button>
-          <Button variant="ghost" size="icon" onClick={downloadCanvas} className="h-9 w-9" title="Download">
+          <Button variant="ghost" size="icon" onClick={downloadCanvas} className="h-9 w-9" title="Save">
             <Download size={18} />
           </Button>
         </div>
       </div>
 
-      {/* Canvas Area - Fixed size, locked background image */}
+      {/* ── Canvas area ── */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-100 flex items-center justify-center"
-        style={{ cursor: isPanning ? "grab" : "crosshair" }}
+        className="flex-1 overflow-hidden"
+        style={{ cursor: isStamp ? "copy" : tool === "eraser" ? "cell" : "crosshair" }}
       >
         <canvas
           ref={canvasRef}
-          className="block touch-none shadow-lg"
-          style={{
-            display: "block",
-            width: CANVAS_WIDTH * zoom,
-            height: CANVAS_HEIGHT * zoom,
-            minWidth: CANVAS_WIDTH * zoom,
-            minHeight: CANVAS_HEIGHT * zoom,
-            imageRendering: "auto",
-          }}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
+          className="block touch-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
         />
       </div>
 
-      {/* Bottom Toolbar */}
-      <div className="border-t bg-background/95 backdrop-blur shrink-0 pb-[env(safe-area-inset-bottom,0px)]">
-        {/* Row 1: Colors */}
-        <div className="flex items-center justify-center gap-2 px-4 py-3">
+      {/* ── Bottom toolbar ── */}
+      <div className="bg-white border-t shadow-sm shrink-0 pb-[env(safe-area-inset-bottom,0px)]">
+        {/* Colors row */}
+        <div className="flex items-center justify-center gap-1.5 px-3 pt-3 pb-1 flex-wrap">
           {COLORS.map((c) => (
             <button
               key={c}
-              onClick={() => { setColor(c); setIsEraser(false); setIsPanning(false); }}
-              className={`w-9 h-9 rounded-full border-2 transition-all shrink-0 ${
-                color === c && !isEraser
-                  ? "border-primary scale-110 ring-2 ring-primary/30"
-                  : "border-white/20"
+              onClick={() => { setColor(c); if (tool === "eraser") setTool("pen"); }}
+              className={`rounded-full transition-all shrink-0 border-2 ${
+                color === c && tool !== "eraser"
+                  ? "border-gray-800 scale-125 shadow-md"
+                  : "border-white shadow-sm"
               }`}
-              style={{ backgroundColor: c }}
+              style={{
+                backgroundColor: c,
+                width: 28,
+                height: 28,
+                outline: c === "#FFFFFF" ? "1px solid #e5e7eb" : undefined,
+              }}
             />
           ))}
         </div>
 
-        {/* Row 2: Brush Sizes */}
-        <div className="flex items-center justify-center gap-4 px-4 pb-3">
-          {SIZES.map((s) => (
-            <button
-              key={s}
-              onClick={() => setBrushSize(s)}
-              className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                brushSize === s ? "bg-primary/20 border-2 border-primary" : "bg-white/10 border-2 border-white/10"
-              }`}
-            >
-              <div
-                className="rounded-full bg-foreground"
-                style={{ width: s + 2, height: s + 2 }}
-              />
-            </button>
-          ))}
+        {/* Brush / stamp size row */}
+        <div className="flex items-center justify-center gap-3 px-4 py-2">
+          {isStamp ? (
+            // Stamp size picker
+            [16, 24, 36, 50].map((s) => (
+              <button
+                key={s}
+                onClick={() => setStampSize(s)}
+                className={`h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-all ${
+                  stampSize === s ? "border-primary bg-primary/10" : "border-gray-200 bg-gray-50"
+                }`}
+              >
+                <span style={{ fontSize: s / 2.2 }}>⭐</span>
+              </button>
+            ))
+          ) : (
+            // Brush size picker
+            BRUSH_SIZES.map((s) => (
+              <button
+                key={s}
+                onClick={() => setBrushSize(s)}
+                className={`h-10 w-10 rounded-xl flex items-center justify-center border-2 transition-all ${
+                  brushSize === s ? "border-primary bg-primary/10" : "border-gray-200 bg-gray-50"
+                }`}
+              >
+                <div
+                  className="rounded-full"
+                  style={{
+                    width: Math.min(s, 26),
+                    height: Math.min(s, 26),
+                    backgroundColor: tool === "eraser" ? "#9ca3af" : color,
+                  }}
+                />
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>

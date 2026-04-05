@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslation } from "@/hooks/use-client-i18n";
 import { useAuthStore } from "@/stores/auth-store";
 import { PageWrapper } from "@/components/layout/page-wrapper";
@@ -32,10 +32,20 @@ export default function StoryReaderPage({ params }: { params: Promise<{ id: stri
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [drawingOpen, setDrawingOpen] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     params.then((p) => fetchStory(p.id));
   }, [params]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   const fetchStory = useCallback(async (id: string) => {
     if (!user) { setLoading(false); return; }
@@ -154,9 +164,17 @@ export default function StoryReaderPage({ params }: { params: Promise<{ id: stri
           <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/50">
             <button
               onClick={() => {
-                const audio = new Audio(story.audio_url);
-                if (playing) { audio.pause(); setPlaying(false); }
-                else { audio.play(); setPlaying(true); }
+                if (playing) {
+                  audioRef.current?.pause();
+                  setPlaying(false);
+                } else {
+                  if (!audioRef.current) {
+                    audioRef.current = new Audio(story.audio_url);
+                    audioRef.current.onended = () => setPlaying(false);
+                  }
+                  audioRef.current.play();
+                  setPlaying(true);
+                }
               }}
               className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
             >

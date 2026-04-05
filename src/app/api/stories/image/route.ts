@@ -134,13 +134,29 @@ export async function POST(req: NextRequest) {
   try {
 
     const heroKey = (hero ?? "").toLowerCase().replace(/\s+/g, "");
-    const theme = HERO_THEMES[heroKey] || { elements: ["bible", "faith"] };
+    const theme = HERO_THEMES[heroKey] || { bg: "#1a1a2e", accent: "#6366F1", icon: "📖", elements: ["bible", "faith", "light"] };
     const lessonColor = LESSON_COLORS[(lesson ?? "").toLowerCase()] || "#6366F1";
 
-    // Build a rich, descriptive prompt for FLUX
-    const scene = sceneDescription || `${hero} showing ${lesson}`;
+    // Build a highly specific scene prompt for accurate story illustration
+    const heroName = hero ? hero.charAt(0).toUpperCase() + hero.slice(1) : "Bible character";
+    const lessonName = lesson ? lesson.charAt(0).toUpperCase() + lesson.slice(1) : "Faith";
+    const sceneElements = (theme as { elements: string[] }).elements?.slice(0, 4).join(", ") || "ancient setting";
 
-    const prompt = `A beautiful children's book illustration in watercolor style. The scene shows: ${scene}. Theme: ${lesson}. Style: soft pastel colors, warm golden lighting, gentle and whimsical storybook art, suitable for young children. Color palette: ${lessonColor} as the main accent color. Mood: inspiring, gentle, faith-filled. Professional children's book illustration quality.`;
+    // Use the actual scene description from the generated story text for accurate illustration
+    const sceneNarrative = sceneDescription
+      ? sceneDescription.replace(/Bible story scene:.*?—.*?\.\s*/i, "").trim()
+      : `${heroName} in a biblical scene demonstrating ${lessonName.toLowerCase()}`;
+
+    const prompt = [
+      `Detailed children's storybook illustration, watercolor and gouache style.`,
+      `Character: ${heroName} from the Bible.`,
+      `Scene: ${sceneNarrative}`,
+      `Visual elements: ${sceneElements}.`,
+      `Lesson depicted: ${lessonName}.`,
+      `Art direction: warm golden hour lighting, rich earth tones accented with ${lessonColor}, expressive characters with kind faces, lush ancient Middle-Eastern landscape, hand-painted texture.`,
+      `Style: high-quality children's picture book, similar to award-winning illustrated Bibles, safe and uplifting for ages 5-12.`,
+      `No text, no letters, no watermarks.`,
+    ].join(" ");
 
     const response = await fetch(
       "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
@@ -153,8 +169,10 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           inputs: prompt,
           parameters: {
-            guidance_scale: 7.5,
+            guidance_scale: 4.5,
             num_inference_steps: 4,
+            width: 768,
+            height: 576,
           },
         }),
       }

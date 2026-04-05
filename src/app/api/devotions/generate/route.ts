@@ -10,66 +10,66 @@ const MOOD_KEYWORDS: Record<string, {
   struggling: {
     en: "Struggling",
     sw: "Anapambana",
-    theme: "God's comfort in hard times",
-    themeSw: "Faraja ya Mungu wakati wa shida",
+    theme: "God's comfort and strength in hard times",
+    themeSw: "Faraja na nguvu ya Mungu wakati wa shida",
     verses: [
       { book: "psalms", chapter: 34, verse: 18 },
       { book: "matthew", chapter: 11, verse: 28 },
-      { book: "romans", chapter: 8, verse: 28 },
-      { book: "2 corinthians", chapter: 1, verse: 3 },
       { book: "isaiah", chapter: 41, verse: 10 },
+      { book: "2-corinthians", chapter: 12, verse: 9 },
+      { book: "psalms", chapter: 46, verse: 1 },
     ],
   },
   neutral: {
     en: "Neutral",
-    sw: "Wastani",
-    theme: "Daily guidance and trust in God",
+    sw: "Kawaida",
+    theme: "Daily guidance and trust in God's plan",
     themeSw: "Mwongozo wa kila siku na kumwamini Mungu",
     verses: [
       { book: "psalms", chapter: 119, verse: 105 },
       { book: "proverbs", chapter: 3, verse: 5 },
-      { book: "philippians", chapter: 4, verse: 13 },
       { book: "jeremiah", chapter: 29, verse: 11 },
+      { book: "philippians", chapter: 4, verse: 6 },
       { book: "colossians", chapter: 3, verse: 23 },
     ],
   },
   peaceful: {
     en: "Peaceful",
     sw: "Ana amani",
-    theme: "Resting in God's peace",
-    themeSw: "Kupumzika katika amani ya Mungu",
+    theme: "Resting and abiding in God's presence",
+    themeSw: "Kupumzika na kukaa katika uwepo wa Mungu",
     verses: [
-      { book: "psalms", chapter: 23, verse: 1 },
+      { book: "psalms", chapter: 23, verse: 2 },
       { book: "john", chapter: 14, verse: 27 },
       { book: "isaiah", chapter: 26, verse: 3 },
-      { book: "philippians", chapter: 4, verse: 6 },
+      { book: "philippians", chapter: 4, verse: 7 },
       { book: "psalms", chapter: 46, verse: 10 },
     ],
   },
   joyful: {
     en: "Joyful",
     sw: "Anafurahi",
-    theme: "Giving thanks and praising God",
-    themeSw: "Kushukuru na kumsifu Mungu",
+    theme: "Giving thanks and celebrating God's goodness",
+    themeSw: "Kushukuru na kusherehekea wema wa Mungu",
     verses: [
       { book: "psalms", chapter: 100, verse: 2 },
       { book: "philippians", chapter: 4, verse: 4 },
       { book: "nehemiah", chapter: 8, verse: 10 },
       { book: "psalms", chapter: 16, verse: 11 },
-      { book: "1 thessalonians", chapter: 5, verse: 16 },
+      { book: "1-thessalonians", chapter: 5, verse: 18 },
     ],
   },
   seeking: {
     en: "Seeking",
     sw: "Anatafuta",
-    theme: "Searching for God's purpose and direction",
-    themeSw: "Kutafuta kusudi na mwelekeo wa Mungu",
+    theme: "Finding God's purpose, wisdom, and direction",
+    themeSw: "Kupata kusudi, hekima, na mwelekeo wa Mungu",
     verses: [
       { book: "jeremiah", chapter: 29, verse: 13 },
       { book: "matthew", chapter: 7, verse: 7 },
       { book: "james", chapter: 1, verse: 5 },
-      { book: "proverbs", chapter: 2, verse: 6 },
-      { book: "psalms", chapter: 27, verse: 4 },
+      { book: "proverbs", chapter: 3, verse: 6 },
+      { book: "psalms", chapter: 37, verse: 4 },
     ],
   },
 };
@@ -77,13 +77,13 @@ const MOOD_KEYWORDS: Record<string, {
 async function fetchBibleVerse(version: string, book: string, chapter: number, verse: number): Promise<string | null> {
   try {
     const url = `https://cdn.jsdelivr.net/gh/wldeh/bible-api/bibles/${version}/books/${book}/chapters/${chapter}/verses/${verse}.json`;
-    const response = await fetch(url);
+    const response = await fetch(url, { next: { revalidate: 86400 } });
     if (response.ok) {
       const data = await response.json();
       return data.text || null;
     }
   } catch {
-    // Silently fail -- we'll just use the reference without the text
+    // Silently fail
   }
   return null;
 }
@@ -93,8 +93,7 @@ async function fetchVerses(verses: { book: string; chapter: number; verse: numbe
     verses.map(async (v) => {
       const text = await fetchBibleVerse(version, v.book, v.chapter, v.verse);
       if (text) {
-        const ref = `${v.book} ${v.chapter}:${v.verse}`;
-        return { reference: ref, text };
+        return { reference: `${v.book.replace(/-/g, " ")} ${v.chapter}:${v.verse}`, text: text.trim() };
       }
       return null;
     })
@@ -102,138 +101,132 @@ async function fetchVerses(verses: { book: string; chapter: number; verse: numbe
   return results.filter((r): r is { reference: string; text: string } => r !== null);
 }
 
+async function callGroq(model: string, systemPrompt: string, userPrompt: string): Promise<string | null> {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) return null;
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${groqKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+        temperature: 0.7,
+        max_tokens: 900,
+      }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    }
+    const err = await response.text();
+    console.warn(`Groq ${model} failed:`, response.status, err.slice(0, 200));
+  } catch (err) {
+    console.warn(`Groq ${model} error:`, err);
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const groqKey = process.env.GROQ_API_KEY;
-
   if (!groqKey) {
-    return NextResponse.json(
-      { error: "GROQ_API_KEY not set. Add it to .env.local" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "GROQ_API_KEY not set. Add it to .env.local" }, { status: 500 });
   }
 
   try {
     const { mood, language } = await req.json();
 
-    // Step 1: Understand the mood/word and find matching theme
-    const moodKey = Object.keys(MOOD_KEYWORDS).find(
-      (key) => key === mood?.toLowerCase()
-    ) || "neutral";
+    const moodKey = Object.keys(MOOD_KEYWORDS).find((k) => k === mood?.toLowerCase()) || "neutral";
     const moodData = MOOD_KEYWORDS[moodKey];
+    const isSw = language === "sw";
 
-    // Step 2: Fetch actual Bible verses from the free API
-    const version = language === "sw" ? "swh_bib" : "en-kjv";
+    // Fetch actual Bible verses
+    const version = isSw ? "swh_bib" : "en-kjv";
     const fetchedVerses = await fetchVerses(moodData.verses, version);
 
-    // Format verses for the prompt
-    const verseBlockSw = fetchedVerses.length > 0
-      ? fetchedVerses.map((v, i) => `${i + 1}. "${v.text}" -- (${v.reference})`).join("\n")
-      : "Hakuna maandiko yaliyopatikana.";
+    const verseBlock = fetchedVerses.length > 0
+      ? fetchedVerses.map((v, i) => `${i + 1}. "${v.text}" — ${v.reference}`).join("\n")
+      : isSw ? "Zaburi 23:1 — BWANA ndiye mchungaji wangu" : "Psalm 23:1 — The Lord is my shepherd";
 
-    const verseBlockEn = fetchedVerses.length > 0
-      ? fetchedVerses.map((v, i) => `${i + 1}. "${v.text}" -- (${v.reference})`).join("\n")
-      : "No scriptures were found.";
-
-    const verseRefsSw = fetchedVerses.length > 0
+    const verseRefs = fetchedVerses.length > 0
       ? fetchedVerses.map((v) => v.reference).join(", ")
-      : "Zaburi 23:1";
+      : isSw ? "Zaburi 23:1" : "Psalm 23:1";
 
-    const verseRefsEn = fetchedVerses.length > 0
-      ? fetchedVerses.map((v) => v.reference).join(", ")
-      : "Psalm 23:1";
+    const systemPrompt = isSw
+      ? `Wewe ni kiongozi wa ibada mwenye hekima, upendo, na Kiswahili ni lugha yako ya mama. Unaandika tafakari za ibada kwa waumini wa Afrika Mashariki — Kiswahili cha asili, cha moyo, na cha kuvutia.
 
-    // Step 3: Build the system prompt with full context
-    const systemPrompt =
-      language === "sw"
-        ? `Wewe ni kiongozi wa ibada mwenye hekima na upendo. Kazi yako ni kuandika tafakari fupi ya dakika 2 kwa mtoto wa Mungu.
+━━━ HALI YA MTU ━━━
+Mtu anayehisi: "${moodData.sw}" (${moodData.themeSw})
 
-HALI YA MTU: "${moodData.sw}" (${moodData.themeSw})
+━━━ MAANDIKO HALISI YA BIBLIA ━━━
+Maandiko haya yametolewa moja kwa moja kutoka Biblia ya Kiswahili. Yasome kwa makini:
+${verseBlock}
 
-MAANDIKO HALISI YA BIBLIA (yameletwa kutoka Biblia ya Kiswahili):
-${verseBlockSw}
+━━━ MUUNDO WA TAFAKARI ━━━
+1. KICHWA — kinachovutia na kinachofaa hali ya mtu
+2. UTANGULIZI — maneno ya huruma yanayomkaribishia mtu pale alipo (mistari 2-3)
+3. MSINGI WA MAANDIKO — nukuu angalau maandiko 2 kutoka hapo juu, uyaeleze kwa undani
+4. MWONGOZO — mafundisho ya kiroho yanayotoka moja kwa moja kwenye maandiko hayo
+5. MATUMIZI — jinsi somo hilo linavyotumika maishani leo
+6. MAOMBI — maombi ya kweli yanayofaa hali ya mtu (angalau mistari 4)
 
-MUONGOZO WA KUANDIKA:
-1. ANZA kwa kichwa cha tafakari kinachovutia
-2. ELEZA hali ya mtu kwa huruma na uelewe -- onyesha kwamba unaelewa anachopitia
-3. TUMIA maandiko yaliyotolewa hapo juu kama msingi wa tafakari -- nukuu au urejee angalau maandiko 2
-4. TOA mwongozo wa kiroho na maneno ya faraja yanayotokana na maandiko hayo
-5. MALIZA KWA MAOMBI fupi yenye nguvu inayofaa hali ya mtu
+━━━ UBORA WA KISWAHILI ━━━
+• Andika kama unavyozungumza na mtu wa karibu — wazi, wa moyo, wa kweli
+• KAMWE usitumie Kiingereza au maneno ya kigeni bila sababu
+• SAHIHI: "Moyo wake ulipumzika", "Mungu alimshika mkono", "Machozi ya furaha"
+• MBAYA: "Alirelax", "God alimprotect", "Alikuwa okay"
+• Maombi: ianze "Bwana," au "Mungu Baba," na iishe "kwa jina la Yesu, Amina."
 
-MUHIMU:
-- Tafakari lazima iishe kwa sehemu ya "MAOMBI:" yenye maombi halisi
-- Tumia Kiswahili safi, rahisi, na cha moyo
-- Usitumie maneno magumu ya Kiarabu au Kiingereza
-- Maombi ya mwisho ianze na "Bwana," au "Mungu wetu," na iishe "Amina."
-- Urefu: takriban 400-500 maneno`
-        : `You are a wise and loving devotional writer. Your task is to write a 2-minute reflection for a child of God.
+Urefu: maneno 350-450.`
+      : `You are a wise, warm devotional writer. You write for believers who need to encounter God through Scripture — not self-help advice, but genuine biblical truth applied to real life.
 
-PERSON'S STATE: "${moodData.en}" (${moodData.theme})
+━━━ PERSON'S STATE ━━━
+Feeling: "${moodData.en}" (${moodData.theme})
 
-ACTUAL BIBLE VERSES (from the King James Version):
-${verseBlockEn}
+━━━ ACTUAL BIBLE VERSES (King James Version) ━━━
+Read these carefully — they are the foundation for the entire devotional:
+${verseBlock}
 
-WRITING GUIDE:
-1. START with an engaging devotional title
-2. ACKNOWLEDGE the person's situation with empathy and understanding
-3. USE the scriptures provided above as the foundation -- quote or reference at least 2 verses
-4. OFFER spiritual guidance and words of comfort drawn from those scriptures
-5. END WITH a short, powerful prayer that matches the person's situation
+━━━ DEVOTIONAL STRUCTURE ━━━
+1. TITLE — compelling and relevant to their state
+2. OPENING — 2-3 sentences meeting them where they are with empathy
+3. SCRIPTURE — quote at least 2 verses from the list above, expound their meaning
+4. APPLICATION — practical, Spirit-led guidance drawn directly from those scriptures
+5. REFLECTION QUESTION — one simple question to carry through the day
+6. PRAYER — a heartfelt prayer that matches their situation (at least 4 lines)
 
-IMPORTANT:
-- The devotional MUST end with a "PRAYER:" section containing an actual prayer
-- Use simple, warm, heartfelt language
-- The prayer should start with "Lord," or "Dear God," and end with "Amen."
-- Length: approximately 400-500 words`;
+━━━ WRITING STANDARDS ━━━
+• Write from Scripture outward, not self-help inward
+• Every point of guidance must trace back to a verse above
+• Warm, personal, direct — like a trusted pastor speaking to a friend
+• Prayer: start "Lord," or "Dear God," end with "Amen."
 
-    const userPrompt =
-      language === "sw"
-        ? `Andika tafakari ya ibada kwa mtu anayehisi "${moodData.sw}". Tumia maandiko halisi yaliyotolewa hapo juu. Hakikisha tafakari ina mwanzo, katikati, na mwisho wenye maombi.`
-        : `Write a devotional reflection for someone feeling "${moodData.en}". Use the actual scripture texts provided above. Make sure the devotional has a clear beginning, middle, and ends with a prayer.`;
+Length: 400-500 words.`;
 
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 800,
-        }),
+    const userPrompt = isSw
+      ? `Andika tafakari ya ibada kwa mtu anayehisi "${moodData.sw}". Tumia maandiko halisi yaliyotolewa. Hakikisha tafakari ina mwanzo, mwili, na maombi ya kweli mwishoni.`
+      : `Write a devotional for someone feeling "${moodData.en}". Use the actual scriptures provided. Make sure it has a clear opening, scriptural body, and ends with a real prayer.`;
+
+    // Try best models first
+    const models = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "llama-3.1-8b-instant"];
+    let content: string | null = null;
+    for (const model of models) {
+      content = await callGroq(model, systemPrompt, userPrompt);
+      if (content) {
+        console.log(`Devotion generated with: ${model}`);
+        break;
       }
-    );
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Groq devotions error:", response.status, errText);
-      return NextResponse.json(
-        { error: `Groq API error: ${response.status}` },
-        { status: response.status }
-      );
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
     if (!content) {
-      return NextResponse.json(
-        { error: "No content returned from Groq" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Devotion generation failed. Check your GROQ_API_KEY." }, { status: 500 });
     }
 
     return NextResponse.json({
       content,
-      scripture_ref: language === "sw" ? verseRefsSw : verseRefsEn,
-      mood: moodData[language === "sw" ? "sw" : "en"],
-      theme: language === "sw" ? moodData.themeSw : moodData.theme,
+      scripture_ref: verseRefs,
+      mood: isSw ? moodData.sw : moodData.en,
+      theme: isSw ? moodData.themeSw : moodData.theme,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";

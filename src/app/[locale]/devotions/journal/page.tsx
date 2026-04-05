@@ -80,26 +80,37 @@ export default function JournalPage() {
   const addPrayer = async () => {
     if (!newContent.trim() || !user) return;
 
+    const tempId = Date.now().toString();
     const newPrayer: Prayer = {
-      id: Date.now().toString(),
+      id: tempId,
       encrypted_content: newContent,
       status: "active",
       created_at: new Date().toISOString(),
       answered_at: null,
     };
 
-    setPrayers([newPrayer, ...prayers]);
+    setPrayers((prev) => [newPrayer, ...prev]);
     setNewContent("");
     setShowNew(false);
 
     try {
       const supabase = createBrowserClient();
-      await supabase.from("prayers").insert({
+      const { data, error } = await supabase.from("prayers").insert({
         user_id: user.id,
         encrypted_content: newContent,
         status: "active",
-      });
-    } catch {}
+      }).select().single();
+
+      if (error) throw error;
+
+      // Replace temp entry with the real DB record (gets real id)
+      if (data) {
+        setPrayers((prev) => prev.map((p) => (p.id === tempId ? data : p)));
+      }
+    } catch {
+      // Rollback optimistic update
+      setPrayers((prev) => prev.filter((p) => p.id !== tempId));
+    }
   };
 
   const markAnswered = async (id: string) => {

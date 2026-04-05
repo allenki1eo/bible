@@ -11,13 +11,23 @@ import { ArrowLeft, Check, Sparkle } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase-browser";
 
+interface Devotion {
+  id: string;
+  user_id: string;
+  date: string;
+  mood: string;
+  content: string;
+  scripture_ref: string;
+  completed: boolean;
+}
+
 export default function DevotionReaderPage({ params }: { params: Promise<{ date: string }> }) {
   const { t, locale } = useTranslation();
   const user = useAuthStore((s) => s.user);
   const router = useRouter();
   const isSw = locale === "sw";
 
-  const [devotion, setDevotion] = useState<any>(null);
+  const [devotion, setDevotion] = useState<Devotion | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

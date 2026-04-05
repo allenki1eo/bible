@@ -152,10 +152,25 @@ export default function StreakPage() {
   const unlockedCount = heroCards.filter((h) => h.unlocked).length;
   const graceRemaining = 1 - streakData.grace_days_used;
 
-  // Generate 90-day activity grid
+  // Generate 90-day activity grid based on last_check_in and streak count
   const activityGrid: boolean[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lastCheckIn = streakData.last_check_in
+    ? new Date(streakData.last_check_in + "T00:00:00")
+    : null;
+  if (lastCheckIn) lastCheckIn.setHours(0, 0, 0, 0);
   for (let i = 89; i >= 0; i--) {
-    activityGrid.push(i < streakData.current_streak);
+    const day = new Date(today);
+    day.setDate(today.getDate() - i);
+    if (lastCheckIn) {
+      const daysDiff = Math.round(
+        (lastCheckIn.getTime() - day.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      activityGrid.push(daysDiff >= 0 && daysDiff < streakData.current_streak);
+    } else {
+      activityGrid.push(false);
+    }
   }
 
   if (loading) {

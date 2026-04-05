@@ -119,17 +119,23 @@ function adjustColor(hex: string, amount: number): string {
 export async function POST(req: NextRequest) {
   const hfKey = process.env.HUGGINGFACE_API_KEY;
 
+  let body: { hero?: string; lesson?: string; sceneDescription?: string } = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+  const { hero, lesson, sceneDescription } = body;
+
   if (!hfKey) {
-    const { hero, lesson, sceneDescription } = await req.json();
     return NextResponse.json({ image: generateStoryImage(hero || "Bible", lesson || "Faith", sceneDescription) });
   }
 
   try {
-    const { hero, lesson, sceneDescription } = await req.json();
 
-    const heroKey = hero?.toLowerCase().replace(/\s+/g, "") || "";
+    const heroKey = (hero ?? "").toLowerCase().replace(/\s+/g, "");
     const theme = HERO_THEMES[heroKey] || { elements: ["bible", "faith"] };
-    const lessonColor = LESSON_COLORS[lesson?.toLowerCase()] || "#6366F1";
+    const lessonColor = LESSON_COLORS[(lesson ?? "").toLowerCase()] || "#6366F1";
 
     // Build a rich, descriptive prompt for FLUX
     const scene = sceneDescription || `${hero} showing ${lesson}`;
@@ -171,6 +177,5 @@ export async function POST(req: NextRequest) {
   }
 
   // Fallback: generate themed SVG placeholder
-  const { hero, lesson, sceneDescription } = await req.json().catch(() => ({ hero: "Bible", lesson: "Faith", sceneDescription: undefined }));
   return NextResponse.json({ image: generateStoryImage(hero || "Bible", lesson || "Faith", sceneDescription) });
 }

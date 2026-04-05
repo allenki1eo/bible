@@ -183,14 +183,25 @@ export default function DevotionsPage() {
 
         // Calculate which days of the current week were active
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+        const lastCheckIn = data.last_check_in
+          ? new Date(data.last_check_in + "T00:00:00")
+          : null;
+        if (lastCheckIn) lastCheckIn.setHours(0, 0, 0, 0);
         const days: boolean[] = [];
         for (let i = 0; i < 7; i++) {
           const d = new Date(today);
-          d.setDate(d.getDate() - ((dayOfWeek + 6) % 7) + i); // Start from Monday
+          d.setDate(today.getDate() - ((dayOfWeek + 6) % 7) + i); // Start from Monday
           d.setHours(0, 0, 0, 0);
-          const dateStr = d.toISOString().split("T")[0];
-          days.push(dateStr <= data.last_check_in && (data.current_streak > (6 - i)));
+          if (lastCheckIn && d <= today) {
+            const daysDiff = Math.round(
+              (lastCheckIn.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            days.push(daysDiff >= 0 && daysDiff < data.current_streak);
+          } else {
+            days.push(false);
+          }
         }
         setWeekDays(days);
       }
@@ -245,7 +256,11 @@ export default function DevotionsPage() {
         });
 
         // Update streak
-        try { await supabase.rpc("update_streak", { p_user_id: user.id }); } catch {}
+        try {
+          await supabase.rpc("update_streak", { p_user_id: user.id });
+        } catch (streakErr) {
+          console.error("Streak update failed:", streakErr);
+        }
 
         // Refresh streak display
         await fetchStreak();

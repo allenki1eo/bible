@@ -37,7 +37,7 @@ export function useTranslation() {
       }
       return value;
     },
-    [messages]
+    [messages, locale]
   );
 
   return { t, locale };

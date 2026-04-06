@@ -83,11 +83,16 @@ export default function StudyPlansPage() {
           {STUDY_PLANS.map((plan) => {
             const enrollment = enrollments[plan.id];
             const isEnrolled = !!enrollment;
-            const progressDays  = isEnrolled ? getProgressDays(enrollment.enrolledAt, plan.totalDays) : 0;
-            const todayChapter  = mounted && isEnrolled ? getTodayChapter(plan, enrollment.enrolledAt) : null;
-            const isPlanComplete = isEnrolled && progressDays >= plan.totalDays;
-            const progressPct   = Math.min((progressDays / plan.totalDays) * 100, 100);
+            // completedDays = days the user manually marked ✓ (source of truth)
             const completedDays = (completions[plan.id] ?? []).length;
+            // nextDay = the day they should study next (1-based)
+            const nextDay = completedDays + 1;
+            // todayChapter = the chapter for the next uncompleted day
+            const todayChapter = mounted && isEnrolled
+              ? (plan.chapters.find((c) => c.day === nextDay) ?? null)
+              : null;
+            const isPlanComplete = isEnrolled && completedDays >= plan.totalDays;
+            const progressPct   = Math.min((completedDays / plan.totalDays) * 100, 100);
 
             return (
               <Card key={plan.id} className={isEnrolled ? "border-primary/30" : ""}>
@@ -122,7 +127,7 @@ export default function StudyPlansPage() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{isSw ? "Maendeleo" : "Progress"}</span>
-                        <span>{progressDays}/{plan.totalDays}</span>
+                        <span>{completedDays}/{plan.totalDays}</span>
                       </div>
                       <Progress value={progressPct} className="h-2" />
                     </div>
@@ -132,7 +137,7 @@ export default function StudyPlansPage() {
                   {mounted && isEnrolled && !isPlanComplete && todayChapter && (
                     <div className="bg-primary/8 border border-primary/15 rounded-xl p-3 space-y-1">
                       <p className="text-xs font-bold text-primary uppercase tracking-wide">
-                        {isSw ? `Siku ${progressDays + 1} — Leo` : `Day ${progressDays + 1} — Today`}
+                        {isSw ? `Siku ${nextDay} — Leo` : `Day ${nextDay} — Today`}
                       </p>
                       <p className="text-sm font-semibold">
                         {todayChapter.book} {todayChapter.chapter} — {todayChapter.title}

@@ -24,30 +24,34 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
-    const { error } = await supabase.from("push_subscriptions").upsert(
-      {
+    // Delete any existing row for this endpoint first, then insert.
+    // This avoids needing a UNIQUE constraint on `endpoint` (ON CONFLICT upserts
+    // require a constraint, which may not exist in older deployments).
+    await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+
+    const row: Record<string, unknown> = {
+      user_id: userId,
+      endpoint: sub.endpoint,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
+    };
+
+    // Add preference columns if the schema supports them
+    if (notifPrefs) {
+      row.notif_time = notifPrefs.time ?? "07:00";
+      row.notif_topics = notifPrefs.topics ?? ["devotions"];
+    }
+
+    const { error } = await supabase.from("push_subscriptions").insert(row);
+
+    if (error) {
+      // Retry without pref columns in case schema doesn't have them
+      const { error: fallbackError } = await supabase.from("push_subscriptions").insert({
         user_id: userId,
         endpoint: sub.endpoint,
         p256dh: sub.keys.p256dh,
         auth: sub.keys.auth,
-        // store optional preferences alongside the subscription
-        notif_time: notifPrefs?.time ?? "07:00",
-        notif_topics: notifPrefs?.topics ?? ["devotions"],
-      },
-      { onConflict: "endpoint" }
-    );
-
-    if (error) {
-      // Fallback: upsert without the optional pref columns (schema may not have them yet)
-      const { error: fallbackError } = await supabase.from("push_subscriptions").upsert(
-        {
-          user_id: userId,
-          endpoint: sub.endpoint,
-          p256dh: sub.keys.p256dh,
-          auth: sub.keys.auth,
-        },
-        { onConflict: "endpoint" }
-      );
+      });
       if (fallbackError) {
         console.error("[subscribe] DB error:", fallbackError);
         return NextResponse.json({ error: fallbackError.message }, { status: 500 });

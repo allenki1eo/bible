@@ -569,6 +569,20 @@ export default function DevotionsPage() {
               </CardContent>
             </Card>
           </Link>
+          <Link href={`${pathname}/quiz/battle`}>
+            <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors border-purple-500/20 bg-purple-500/5">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <span className="text-lg">⚔️</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{isSw ? "Vita vya Biblia" : "Bible Battle"}</p>
+                  <p className="text-xs text-muted-foreground">{isSw ? "Shindana na rafiki kwa wakati mmoja" : "Challenge a friend in real-time with a room code"}</p>
+                </div>
+                <Badge variant="secondary" className="text-[10px] shrink-0">NEW</Badge>
+              </CardContent>
+            </Card>
+          </Link>
           <Link href={`${pathname}/quiz/leaderboard`}>
             <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors border-amber-500/20">
               <CardContent className="p-4 flex items-center gap-4">

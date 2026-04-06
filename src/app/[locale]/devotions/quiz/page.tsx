@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Brain, Check, X, Sparkle, ArrowClockwise,
-  Crown, Fire, Lightning, Trophy, ArrowRight,
+  Crown, Fire, Lightning, Trophy, ArrowRight, Users,
 } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/auth-store";
@@ -364,6 +364,13 @@ export default function QuizPage() {
             <Lightning size={20} weight="fill" />
             {isSw ? "Anza Mchezo!" : "Start Playing!"}
           </Button>
+
+          <Link href="quiz/battle" className="block">
+            <button className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors font-semibold text-sm">
+              <Users size={18} weight="fill" className="text-primary" />
+              {isSw ? "⚔️ Shindana na Rafiki (Bible Battle)" : "⚔️ Challenge a Friend (Bible Battle)"}
+            </button>
+          </Link>
 
           <Link href="leaderboard" className="block text-center text-sm text-muted-foreground hover:text-foreground transition-colors">
             <span className="flex items-center justify-center gap-1.5">

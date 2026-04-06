@@ -71,7 +71,7 @@ async function generateWithGroq(prompt: string): Promise<string> {
       const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-        body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: 1200, temperature: 0.6 }),
+        body: JSON.stringify({ model, messages: [{ role: "user", content: prompt }], max_tokens: 2000, temperature: 0.6 }),
       });
       if (!res.ok) continue;
       const data = await res.json();
@@ -137,15 +137,14 @@ function buildFallbackQuestions(theme: string, ref: string, verse: string): Ques
       answer: "Jesus",
       category: "Who Said It?",
     },
-    {
-      type: "multiple_choice",
-      question: "In which city was Jesus born?",
-      options: ["Bethlehem", "Nazareth", "Jerusalem", "Capernaum"],
-      answer: "Bethlehem",
-      category: "Bible Geography",
-    },
+    { type: "multiple_choice", question: "In which city was Jesus born?", options: ["A. Bethlehem", "B. Nazareth", "C. Jerusalem", "D. Capernaum"], answer: "A. Bethlehem", category: "Bible Geography" },
+    { type: "multiple_choice", question: "How many days did it take God to create the world?", options: ["A. 6 days", "B. 7 days", "C. 3 days", "D. 40 days"], answer: "A. 6 days", category: "Bible Events" },
+    { type: "true_false", statement: "Jesus was baptised in the River Jordan.", answer: true, category: "Bible Facts" },
+    { type: "who_said_it", quote: "You are the Christ, the Son of the living God.", options: ["A. Peter", "B. John", "C. Thomas", "D. Andrew"], answer: "A. Peter", category: "Who Said It?" },
   ];
 }
+
+// prompt already updated to request 10 questions
 
 // ── Prompt for diverse, fun quiz questions ────────────────────────────────────
 function buildPrompt(theme: string, ref: string, verse: string, isSw: boolean): string {
@@ -154,78 +153,51 @@ function buildPrompt(theme: string, ref: string, verse: string, isSw: boolean): 
 
 Mada ya wiki: "${theme}" (maandiko: ${ref})
 
-Rudisha JSON PEKE YAKE (bila maelezo), muundo huu HASA:
+Rudisha JSON PEKE YAKE (bila maelezo yoyote), orodha ya maswali 10:
 {
   "questions": [
     { "type": "who_said_it", "category": "Alisema Nani?", "quote": "...", "options": ["A. Yesu", "B. Paulo", "C. Petro", "D. Musa"], "answer": "A. Yesu" },
     { "type": "multiple_choice", "category": "Jiografia ya Biblia", "question": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A. ..." },
-    { "type": "fill_blank", "category": "Kumbuka Andiko", "verse": "${verse.split(" ").slice(0,4).join(" ")} ___ ${verse.split(" ").slice(5,8).join(" ")}", "answer": "${verse.split(" ")[4]?.replace(/[^a-zA-Z]/g,"") || "Mungu"}", "ref": "${ref}" },
+    { "type": "fill_blank", "category": "Kumbuka Andiko", "verse": "...___ ...", "answer": "neno", "ref": "${ref}" },
     { "type": "true_false", "category": "Kweli au Uongo", "statement": "...", "answer": true },
-    { "type": "multiple_choice", "category": "Matukio ya Biblia", "question": "Miujiza ya Yesu — alimfufua nani kutoka kwa wafu?", "options": ["A. Lazaro", "B. Petro", "C. Yohana", "D. Andrea"], "answer": "A. Lazaro" },
-    { "type": "who_said_it", "category": "Alisema Nani?", "quote": "Sitakuacha wala sitakukimbia", "options": ["A. Mungu kwa Yoshua", "B. Yesu kwa wanafunzi", "C. Paulo kwa Timotheo", "D. Musa kwa Waisraeli"], "answer": "A. Mungu kwa Yoshua" }
+    { "type": "multiple_choice", "category": "Miujiza ya Biblia", "question": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A. ..." },
+    { "type": "who_said_it", "category": "Alisema Nani?", "quote": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A. ..." },
+    { "type": "multiple_choice", "category": "Takwimu za Biblia", "question": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A. ..." },
+    { "type": "true_false", "category": "Kweli au Uongo", "statement": "...", "answer": false },
+    { "type": "multiple_choice", "category": "Watu wa Biblia", "question": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A. ..." },
+    { "type": "who_said_it", "category": "Alisema Nani?", "quote": "...", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A. ..." }
   ]
 }
 
-Maswali lazima yajumuishe: "Alisema Nani?" (nukuu za Biblia), jiografia, matukio, miujiza, takwimu za Biblia.`;
+Tumia mada tofauti: "Alisema Nani?", "Jiografia ya Biblia", "Miujiza ya Biblia", "Takwimu za Biblia", "Watu wa Biblia", "Kumbuka Andiko", "Kweli au Uongo".`;
   }
 
   return `You are a fun, engaging Bible game designer. Generate exactly 6 diverse Bible quiz questions that mix DIFFERENT game categories to keep it exciting. Today's theme: "${theme}" (scripture: ${ref}).
 
-Return ONLY valid JSON (no markdown, no explanation):
+Return ONLY valid JSON — exactly 10 questions, no markdown, no explanation:
 {
   "questions": [
-    {
-      "type": "who_said_it",
-      "category": "Who Said It?",
-      "quote": "I can do all this through him who gives me strength.",
-      "options": ["A. Paul", "B. Peter", "C. David", "D. Isaiah"],
-      "answer": "A. Paul"
-    },
-    {
-      "type": "multiple_choice",
-      "category": "Bible Geography",
-      "question": "On which mountain did Moses receive the Ten Commandments?",
-      "options": ["A. Mount Sinai", "B. Mount Carmel", "C. Mount Zion", "D. Mount Hermon"],
-      "answer": "A. Mount Sinai"
-    },
-    {
-      "type": "fill_blank",
-      "category": "Verse Completion",
-      "verse": "${verse.split(" ").slice(0, 5).join(" ")} ___ ${verse.split(" ").slice(6, 11).join(" ")}",
-      "answer": "${verse.split(" ")[5]?.replace(/[^a-zA-Z]/g, "") || "God"}",
-      "ref": "${ref}"
-    },
-    {
-      "type": "true_false",
-      "category": "Bible Facts",
-      "statement": "The book of Psalms is the longest book in the Bible with 150 chapters.",
-      "answer": true
-    },
-    {
-      "type": "multiple_choice",
-      "category": "Bible Miracles",
-      "question": "Which miracle did Jesus perform at the wedding in Cana?",
-      "options": ["A. Turned water into wine", "B. Fed 5000 people", "C. Walked on water", "D. Healed a blind man"],
-      "answer": "A. Turned water into wine"
-    },
-    {
-      "type": "who_said_it",
-      "category": "Who Said It?",
-      "quote": "Here I am. Send me!",
-      "options": ["A. Isaiah", "B. Jeremiah", "C. Ezekiel", "D. Moses"],
-      "answer": "A. Isaiah"
-    }
+    { "type": "who_said_it",     "category": "Who Said It?",    "quote": "I can do all this through him who gives me strength.", "options": ["A. Paul","B. Peter","C. David","D. Isaiah"], "answer": "A. Paul" },
+    { "type": "multiple_choice", "category": "Bible Geography", "question": "On which mountain did Moses receive the Ten Commandments?", "options": ["A. Mount Sinai","B. Mount Carmel","C. Mount Zion","D. Mount Hermon"], "answer": "A. Mount Sinai" },
+    { "type": "fill_blank",      "category": "Verse Completion","verse": "For God so ___ the world that he gave his one and only Son.", "answer": "loved", "ref": "John 3:16" },
+    { "type": "true_false",      "category": "Bible Facts",     "statement": "The book of Psalms has 150 chapters, making it the longest book in the Bible.", "answer": true },
+    { "type": "multiple_choice", "category": "Bible Miracles",  "question": "Which miracle did Jesus perform at the wedding in Cana?", "options": ["A. Turned water into wine","B. Fed 5000 people","C. Walked on water","D. Healed a blind man"], "answer": "A. Turned water into wine" },
+    { "type": "who_said_it",     "category": "Who Said It?",    "quote": "Here I am. Send me!", "options": ["A. Isaiah","B. Jeremiah","C. Ezekiel","D. Moses"], "answer": "A. Isaiah" },
+    { "type": "multiple_choice", "category": "Bible Numbers",   "question": "How many disciples did Jesus choose?", "options": ["A. 12","B. 7","C. 10","D. 70"], "answer": "A. 12" },
+    { "type": "true_false",      "category": "Bible Facts",     "statement": "Jesus was baptised in the River Jordan.", "answer": true },
+    { "type": "multiple_choice", "category": "Name That Person","question": "Who built the ark to save his family from the flood?", "options": ["A. Noah","B. Abraham","C. Moses","D. Jonah"], "answer": "A. Noah" },
+    { "type": "who_said_it",     "category": "Who Said It?",    "quote": "You are the Christ, the Son of the living God.", "options": ["A. Peter","B. John","C. Thomas","D. Andrew"], "answer": "A. Peter" }
   ]
 }
 
-Rules for GREAT Bible game questions:
-- Mix categories: "Who Said It?", "Bible Geography", "Bible Miracles", "Verse Completion", "Bible Facts", "Bible Numbers", "Bible Firsts", "Name That Person"
-- "Who Said It?" questions: use real Bible quotes, 4 plausible options
-- Make options plausible but clearly one correct — no trick questions
-- Difficulty: mix easy (Sunday school) + medium (regular reader) questions
-- Keep questions SHORT and punchy — this is a fast-paced game
-- Always start each option with a letter: "A. ...", "B. ...", etc.
-- The answer must exactly match one of the options`;
+RULES for generating GREAT Bible game questions (all 10):
+- Spread across these categories: "Who Said It?", "Bible Geography", "Bible Miracles", "Verse Completion", "Bible Facts", "Bible Numbers", "Name That Person", "Bible Events"
+- Use REAL Bible quotes for "Who Said It?" — make all 4 options plausible people
+- Mix difficulty: easy (Sunday school) + medium (regular reader) + one hard question
+- Keep questions punchy and SHORT — this is a fast-paced game, not an exam
+- Always prefix options: "A. ...", "B. ...", "C. ...", "D. ..." — answer must match exactly
+- Vary the correct answer position (don't always make A correct)
+- Today's theme "${theme}" (${ref}) should inspire at least 2-3 questions`;
 }
 
 export async function GET(req: NextRequest) {

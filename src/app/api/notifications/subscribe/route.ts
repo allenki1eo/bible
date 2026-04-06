@@ -18,10 +18,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid subscription object" }, { status: 400 });
     }
 
-    // Use service-role key so RLS doesn't block the upsert
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!serviceRoleKey) {
+      console.error("[subscribe] SUPABASE_SERVICE_ROLE_KEY is not set — insert will be blocked by RLS");
+    }
+
+    // Use service-role key so RLS doesn't block the insert.
+    // Falls back to anon key only if service role is absent (requires permissive RLS policies).
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
 
     // Delete any existing row for this endpoint first, then insert.

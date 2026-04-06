@@ -304,6 +304,31 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── SUPPORT BANNER ── */}
+      <div className="border-y border-amber-500/20 bg-gradient-to-r from-amber-500/8 via-amber-400/5 to-amber-500/8 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <span className="text-2xl shrink-0">🙏</span>
+            <div>
+              <p className="font-semibold text-sm text-foreground">
+                Nuru is free &amp; ad-free — help us keep it that way
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                If this app has blessed you, consider supporting our mission to reach more believers across East Africa.
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://snippe.me/pay/nuru"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-amber-600 transition-colors"
+          >
+            Support our mission ✦
+          </a>
+        </div>
+      </div>
+
       {/* ── FEATURES ── */}
       <section id="features" className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
@@ -530,6 +555,14 @@ export default function LandingPage() {
               <Link href="/en/auth" className="hover:text-foreground transition-colors">
                 Sign in
               </Link>
+              <a
+                href="https://snippe.me/pay/nuru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors text-amber-600 dark:text-amber-400 font-medium"
+              >
+                Support ✦
+              </a>
             </div>
 
             <p className="text-xs text-muted-foreground text-center sm:text-right">

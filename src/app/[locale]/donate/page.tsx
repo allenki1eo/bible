@@ -4,6 +4,7 @@ import { useTranslation } from "@/hooks/use-client-i18n";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   Heart,
   UsersThree,
@@ -267,6 +268,9 @@ export default function DonatePage() {
             <p className="text-muted-foreground/60 text-xs">
               {isSw ? "Utapelekwa kwenye ukurasa wetu wa malipo" : "You'll be taken to our secure payment page"}
             </p>
+            <Link href="thank-you" className="text-xs text-primary hover:underline">
+              {isSw ? "Umeshatoa? Angalia ukurasa wa shukrani →" : "Already donated? See our thank-you page →"}
+            </Link>
           </CardContent>
         </Card>
 

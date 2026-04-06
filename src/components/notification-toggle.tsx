@@ -76,6 +76,11 @@ export function NotificationToggle() {
 
       // 3. Register service worker and subscribe
       const reg = await navigator.serviceWorker.ready;
+
+      // Unsubscribe any stale subscription first (avoids key-mismatch errors)
+      const existingSub = await reg.pushManager.getSubscription();
+      if (existingSub) await existingSub.unsubscribe().catch(() => null);
+
       let subscription: PushSubscription;
       try {
         subscription = await reg.pushManager.subscribe({
@@ -83,10 +88,12 @@ export function NotificationToggle() {
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         });
       } catch (err) {
-        // Common causes: bad key format, browser blocks push, or existing sub mismatch
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("[NotificationToggle] subscribe error:", msg);
-        toast(`Could not subscribe: ${msg}`, "error");
+        console.error("[NotificationToggle] subscribe error:", msg, "key length:", vapidPublicKey.length);
+        const hint = msg.includes("applicationServerKey")
+          ? "The VAPID public key is invalid — please regenerate it from the admin panel and update your Vercel environment variables."
+          : msg;
+        toast(hint, "error");
         setLoading(false);
         return;
       }

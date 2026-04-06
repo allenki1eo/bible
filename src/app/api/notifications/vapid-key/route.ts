@@ -18,11 +18,36 @@ export async function GET() {
     );
   }
 
-  // Validate: a VAPID public key is a URL-safe base64 string, ~87 chars
   const clean = publicKey.trim();
-  if (clean.length < 80 || clean.length > 100) {
+
+  // Decode the base64url string and validate it is a 65-byte uncompressed P-256
+  // EC public key (byte 0 must be 0x04).
+  try {
+    // Convert base64url → base64 → Buffer
+    const base64 = clean.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = Buffer.from(base64, "base64");
+    if (decoded.length !== 65) {
+      return NextResponse.json(
+        {
+          error: `VAPID public key decodes to ${decoded.length} bytes, expected 65. ` +
+            "Make sure you copied the PUBLIC key (not the private key) from the admin panel. " +
+            "Regenerate and update VAPID_PUBLIC_KEY in your Vercel environment variables.",
+        },
+        { status: 500 }
+      );
+    }
+    if (decoded[0] !== 0x04) {
+      return NextResponse.json(
+        {
+          error: "VAPID public key is not an uncompressed P-256 EC point (first byte must be 0x04). " +
+            "Regenerate and update VAPID_PUBLIC_KEY in your Vercel environment variables.",
+        },
+        { status: 500 }
+      );
+    }
+  } catch {
     return NextResponse.json(
-      { error: `VAPID public key looks malformed (length ${clean.length}, expected ~87). Regenerate using the admin panel.` },
+      { error: "VAPID public key is not valid base64url. Regenerate it from the admin panel." },
       { status: 500 }
     );
   }

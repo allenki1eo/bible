@@ -2,13 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 
-// Configure VAPID details once
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    `mailto:${process.env.VAPID_CONTACT_EMAIL || "nuru@example.com"}`,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+// Configure VAPID lazily inside the handler — module-level setVapidDetails
+// throws during Next.js build-time evaluation if the key is invalid.
+function configureWebPush(): boolean {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
+  try {
+    webpush.setVapidDetails(
+      `mailto:${process.env.VAPID_CONTACT_EMAIL || "nuru@example.com"}`,
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+    return true;
+  } catch (err) {
+    console.error("[push-send] Invalid VAPID keys:", err instanceof Error ? err.message : err);
+    return false;
+  }
 }
 
 interface PushSubscriptionRow {
@@ -25,9 +33,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+  if (!configureWebPush()) {
     return NextResponse.json(
-      { error: "VAPID keys not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in .env.local" },
+      { error: "VAPID keys not configured or invalid — regenerate from the admin panel" },
       { status: 500 }
     );
   }

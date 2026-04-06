@@ -16,10 +16,24 @@ import {
   Sparkle,
   CaretRight,
   Warning,
+  BookOpen,
+  SunHorizon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase-browser";
+import { STUDY_PLANS, getTodayChapter, getProgressDays } from "@/lib/study-plans";
+
+type DailyWord = {
+  title: string;
+  theme: string;
+  scripture_ref: string;
+  content: string;
+  prayer: string;
+  reflection_question: string;
+};
+
+type Enrollment = Record<string, { enrolledAt: string }>;
 
 type Mood = "struggling" | "neutral" | "peaceful" | "joyful" | "seeking";
 
@@ -160,6 +174,10 @@ export default function DevotionsPage() {
   const [completing, setCompleting] = useState(false);
   const [streakData, setStreakData] = useState({ current_streak: 0, longest_streak: 0, grace_days_used: 0 });
   const [weekDays, setWeekDays] = useState<boolean[]>([false, false, false, false, false, false, false]);
+  const [dailyWord, setDailyWord] = useState<DailyWord | null>(null);
+  const [dailyWordLoading, setDailyWordLoading] = useState(true);
+  const [dailyWordExpanded, setDailyWordExpanded] = useState(false);
+  const [studyEnrollments, setStudyEnrollments] = useState<Enrollment>({});
 
   const isSw = locale === "sw";
 
@@ -236,6 +254,23 @@ export default function DevotionsPage() {
   useEffect(() => {
     checkTodayDevotion();
   }, [checkTodayDevotion]);
+
+  // Fetch system daily word
+  useEffect(() => {
+    fetch(`/api/devotions/daily?locale=${locale}`)
+      .then((r) => r.json())
+      .then((data) => { if (data.title || data.theme) setDailyWord(data); })
+      .catch(() => {})
+      .finally(() => setDailyWordLoading(false));
+  }, [locale]);
+
+  // Load study plan enrollments from localStorage
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("nuru_study_plans") || "{}");
+      setStudyEnrollments(stored);
+    } catch {}
+  }, []);
 
   const markDevotionComplete = async () => {
     if (completed || !selectedMood) return;
@@ -378,6 +413,113 @@ export default function DevotionsPage() {
           </Card>
         )}
 
+        {/* Today's Daily Word (system-generated) */}
+        <div>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <SunHorizon size={18} className="text-amber-500" weight="fill" />
+            {isSw ? "Neno la Leo" : "Today's Daily Word"}
+          </h2>
+          {dailyWordLoading ? (
+            <div className="h-28 rounded-xl bg-muted animate-pulse" />
+          ) : dailyWord ? (
+            <Card className="border-amber-500/20 bg-amber-500/5">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider">
+                  <SunHorizon size={13} weight="fill" />
+                  {dailyWord.theme}
+                </div>
+                <p className="font-semibold text-sm">{dailyWord.title}</p>
+                {dailyWord.scripture_ref && (
+                  <p className="text-xs text-muted-foreground font-medium">{dailyWord.scripture_ref}</p>
+                )}
+                {dailyWord.content && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {dailyWordExpanded
+                      ? dailyWord.content
+                      : dailyWord.content.slice(0, 120) + (dailyWord.content.length > 120 ? "..." : "")}
+                  </p>
+                )}
+                {dailyWord.content && dailyWord.content.length > 120 && (
+                  <button
+                    onClick={() => setDailyWordExpanded((v) => !v)}
+                    className="text-xs text-primary font-medium hover:underline"
+                  >
+                    {dailyWordExpanded ? (isSw ? "Funga" : "Show less") : (isSw ? "Soma zaidi" : "Read more")}
+                  </button>
+                )}
+                {dailyWordExpanded && dailyWord.prayer && (
+                  <div className="border-t pt-3 space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {isSw ? "Maombi" : "Prayer"}
+                    </p>
+                    <p className="text-xs text-muted-foreground italic leading-relaxed">{dailyWord.prayer}</p>
+                  </div>
+                )}
+                {dailyWordExpanded && dailyWord.reflection_question && (
+                  <div className="border-t pt-3">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                      {isSw ? "Swali la Kutafakari" : "Reflection Question"}
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{dailyWord.reflection_question}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+
+        {/* Study Plan Progress (if enrolled) */}
+        {Object.keys(studyEnrollments).length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <BookOpen size={18} className="text-primary" weight="fill" />
+              {isSw ? "Mpango wa Usomaji" : "Study Plan"}
+            </h2>
+            <div className="space-y-3">
+              {STUDY_PLANS.filter((p) => studyEnrollments[p.id]).map((plan) => {
+                const enrollment = studyEnrollments[plan.id];
+                const todayChapter = getTodayChapter(plan, enrollment.enrolledAt);
+                const progress = getProgressDays(enrollment.enrolledAt, plan.totalDays);
+                const pct = (progress / plan.totalDays) * 100;
+                const isComplete = progress >= plan.totalDays;
+                return (
+                  <Link key={plan.id} href={`${pathname}/study-plans`}>
+                    <Card className="card-lift cursor-pointer border-primary/20 hover:bg-accent/30 transition-colors">
+                      <CardContent className="p-4 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{plan.icon}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{isSw ? plan.titleSw : plan.title}</p>
+                            {isComplete ? (
+                              <p className="text-xs text-green-600 dark:text-green-400">
+                                {isSw ? "Imekamilika! 🎉" : "Completed! 🎉"}
+                              </p>
+                            ) : todayChapter ? (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {isSw ? "Leo:" : "Today:"} {todayChapter.book} {todayChapter.chapter} — {todayChapter.title}
+                              </p>
+                            ) : null}
+                          </div>
+                          <CaretRight size={16} className="text-muted-foreground shrink-0" />
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div
+                            className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground text-right">
+                          {progress}/{plan.totalDays} {isSw ? "siku" : "days"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Daily Devotional */}
         <div>
           <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -465,6 +607,7 @@ export default function DevotionsPage() {
           {[
             { id: "journal", icon: Notebook, label: t("devotions.prayer_journal"), href: `${pathname}/journal` },
             { id: "streak", icon: Fire, label: t("devotions.vine_streak"), href: `${pathname}/streak` },
+            { id: "study-plans", icon: BookOpen, label: isSw ? "Mipango ya Usomaji" : "Study Plans", href: `${pathname}/study-plans` },
             { id: "quiz", icon: Brain, label: t("devotions.quiz_title"), href: `${pathname}/quiz` },
             { id: "achievements", icon: Trophy, label: isSw ? "Mafanikio" : "Achievements", href: `${pathname.replace("/devotions", "")}/achievements` },
           ].map((item) => (

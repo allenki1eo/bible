@@ -48,13 +48,21 @@ const STUDY_PLAN_DAILY: Record<string, { book: string; chapter: number; title: s
   ],
 };
 
-// Configure VAPID once
-if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(
-    `mailto:${process.env.VAPID_CONTACT_EMAIL || "nuru@example.com"}`,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+// Configure VAPID once — wrapped in try/catch so a bad key doesn't crash the
+// build-time static analysis step (Next.js evaluates module-level code).
+function configureWebPush(): boolean {
+  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return false;
+  try {
+    webpush.setVapidDetails(
+      `mailto:${process.env.VAPID_CONTACT_EMAIL || "nuru@example.com"}`,
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    );
+    return true;
+  } catch (err) {
+    console.error("[daily-notif] Invalid VAPID keys:", err instanceof Error ? err.message : err);
+    return false;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -66,8 +74,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
-    return NextResponse.json({ error: "VAPID keys not configured" }, { status: 500 });
+  if (!configureWebPush()) {
+    return NextResponse.json({ error: "VAPID keys not configured or invalid — regenerate from the admin panel" }, { status: 500 });
   }
 
   const supabase = createClient(

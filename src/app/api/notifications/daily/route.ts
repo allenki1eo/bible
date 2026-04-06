@@ -13,6 +13,41 @@ const MORNING_VERSES = [
   { ref: "Psalm 46:1", en: "God is our refuge and strength, an ever-present help in trouble.", sw: "Mungu ni kimbilio letu na nguvu zetu, msaada uliopo wakati wa dhiki." },
 ];
 
+// Study plan chapters for notification enrichment
+// Maps plan_id -> array indexed by day (0-based)
+const STUDY_PLAN_DAILY: Record<string, { book: string; chapter: number; title: string }[]> = {
+  "acts-28": [
+    { book: "Acts", chapter: 1, title: "The Ascension & Matthias" },
+    { book: "Acts", chapter: 2, title: "Pentecost" },
+    { book: "Acts", chapter: 3, title: "The Lame Man Healed" },
+    { book: "Acts", chapter: 4, title: "Peter & John Before the Council" },
+    { book: "Acts", chapter: 5, title: "Ananias, Sapphira & the Apostles" },
+    { book: "Acts", chapter: 6, title: "The Seven Deacons" },
+    { book: "Acts", chapter: 7, title: "Stephen's Speech" },
+    { book: "Acts", chapter: 8, title: "Philip & the Ethiopian" },
+    { book: "Acts", chapter: 9, title: "Saul's Conversion" },
+    { book: "Acts", chapter: 10, title: "Cornelius & Peter" },
+    { book: "Acts", chapter: 11, title: "Peter's Report" },
+    { book: "Acts", chapter: 12, title: "Peter's Escape" },
+    { book: "Acts", chapter: 13, title: "First Missionary Journey" },
+    { book: "Acts", chapter: 14, title: "Lystra & Derbe" },
+    { book: "Acts", chapter: 15, title: "Jerusalem Council" },
+    { book: "Acts", chapter: 16, title: "Lydia & the Jailer" },
+    { book: "Acts", chapter: 17, title: "Athens & Mars Hill" },
+    { book: "Acts", chapter: 18, title: "Corinth & Priscilla" },
+    { book: "Acts", chapter: 19, title: "Ephesus & the Riot" },
+    { book: "Acts", chapter: 20, title: "Farewell to Ephesus" },
+    { book: "Acts", chapter: 21, title: "Paul Arrested in Jerusalem" },
+    { book: "Acts", chapter: 22, title: "Paul's Defense" },
+    { book: "Acts", chapter: 23, title: "Before the Sanhedrin" },
+    { book: "Acts", chapter: 24, title: "Before Felix" },
+    { book: "Acts", chapter: 25, title: "Before Festus" },
+    { book: "Acts", chapter: 26, title: "Before Agrippa" },
+    { book: "Acts", chapter: 27, title: "The Storm at Sea" },
+    { book: "Acts", chapter: 28, title: "Malta & Rome" },
+  ],
+};
+
 // Configure VAPID once
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -46,7 +81,7 @@ export async function GET(req: NextRequest) {
   );
   const verse = MORNING_VERSES[dayOfYear % MORNING_VERSES.length];
 
-  // Fetch all push subscriptions
+  // Fetch all push subscriptions with user_id for study plan lookup
   const { data: subscriptions, error } = await supabase
     .from("push_subscriptions")
     .select("endpoint, p256dh, auth, user_id");
@@ -60,12 +95,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ sent: 0, message: "No subscribers" });
   }
 
+  // Try to get today's daily devotion theme for richer notification
+  let devotionTheme = "";
+  try {
+    const { data: devotion } = await supabase
+      .from("daily_devotions")
+      .select("theme, title, scripture_ref")
+      .eq("date", new Date().toISOString().slice(0, 10))
+      .eq("locale", "en")
+      .single();
+    if (devotion) {
+      devotionTheme = devotion.title || devotion.theme || "";
+    }
+  } catch {}
+
+  const baseTitle = devotionTheme
+    ? `Good morning ☀️ — ${devotionTheme}`
+    : "Good morning ☀️ — Daily Devotion";
+
   const payload = JSON.stringify({
-    title: "Good morning ☀️ — Daily Devotion",
+    title: baseTitle,
     body: `"${verse.en}" — ${verse.ref}`,
     url: `/en/devotions`,
     tag: "nuru-daily-devotion",
-    swBody: `"${verse.sw}" — ${verse.ref}`, // for future SW locale support
+    swBody: `"${verse.sw}" — ${verse.ref}`,
   });
 
   const results = await Promise.allSettled(
@@ -99,6 +152,18 @@ export async function GET(req: NextRequest) {
       .in("endpoint", expiredEndpoints);
     console.log(`[daily-notif] Removed ${expiredEndpoints.length} expired subscriptions`);
   }
+
+  // Also try to generate today's daily devotion if not yet cached (prime the cache)
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const { data: existingEn } = await supabase.from("daily_devotions").select("date").eq("date", today).eq("locale", "en").single();
+    if (!existingEn) {
+      // Fire-and-forget to prime the cache for both locales
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://nuru1.vercel.app";
+      fetch(`${baseUrl}/api/devotions/daily?locale=en`).catch(() => {});
+      fetch(`${baseUrl}/api/devotions/daily?locale=sw`).catch(() => {});
+    }
+  } catch {}
 
   console.log(`[daily-notif] Sent ${sent}, failed ${failed}, cleaned ${expiredEndpoints.length}`);
   return NextResponse.json({ sent, failed, cleaned: expiredEndpoints.length, verse: verse.ref });

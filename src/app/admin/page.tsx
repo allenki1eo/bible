@@ -42,6 +42,12 @@ interface NotifForm {
   url: string;
 }
 
+interface VapidStatus {
+  configured: boolean;
+  publicKey?: string;
+  error?: string;
+}
+
 // ── Tiny UI helpers ───────────────────────────────────────────────────────────
 function Stat({ label, value, icon, color }: { label: string; value: number | string; icon: string; color: string }) {
   return (
@@ -78,6 +84,8 @@ export default function AdminPage() {
   const [recentTestimonies, setRecentTestimonies] = useState<TestimonyRow[]>([]);
   const [notifForm, setNotifForm] = useState<NotifForm>({ title: "Nuru 🌟", body: "", url: "/en/devotions" });
   const [notifStatus, setNotifStatus] = useState("");
+  const [vapidStatus, setVapidStatus] = useState<VapidStatus | null>(null);
+  const [generatedKeys, setGeneratedKeys] = useState<{ publicKey: string; privateKey: string } | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "users" | "content" | "push">("overview");
 
   // ── Check existing session on mount ──────────────────────────────────────
@@ -139,6 +147,16 @@ export default function AdminPage() {
     setUsers(userRows ?? []);
     setFlagged(flaggedRows ?? []);
     setRecentTestimonies(recentRows ?? []);
+
+    // Check VAPID key status
+    const vapidRes = await fetch("/api/notifications/vapid-key");
+    if (vapidRes.ok) {
+      const { publicKey } = await vapidRes.json();
+      setVapidStatus({ configured: true, publicKey });
+    } else {
+      const { error } = await vapidRes.json().catch(() => ({ error: "Unknown error" }));
+      setVapidStatus({ configured: false, error });
+    }
   }, []);
 
   // ── Approve/delete testimony ──────────────────────────────────────────────
@@ -406,6 +424,67 @@ export default function AdminPage() {
 
         {/* ── PUSH NOTIFICATIONS TAB ───────────────────────────────────────── */}
         {activeTab === "push" && (
+          <div className="space-y-4">
+
+          {/* VAPID key status */}
+          <Section title="VAPID Key Status">
+            {!vapidStatus ? (
+              <div className="h-8 animate-pulse bg-white/5 rounded-lg" />
+            ) : vapidStatus.configured ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+                  <span className="text-emerald-400 text-sm font-medium">VAPID key is configured ✓</span>
+                </div>
+                <p className="text-white/30 text-xs font-mono break-all bg-white/4 rounded-lg px-3 py-2">
+                  {vapidStatus.publicKey}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <span className="text-red-400 text-base flex-shrink-0 mt-0.5">⚠️</span>
+                  <div>
+                    <p className="text-red-300 text-sm font-medium">VAPID key not configured</p>
+                    <p className="text-red-400/70 text-xs mt-1">{vapidStatus.error}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-white/50 text-xs mb-2">
+                    Generate a new key pair and add them to your Vercel environment variables:
+                  </p>
+                  <button
+                    onClick={async () => {
+                      const res = await fetch("/api/notifications/generate-vapid");
+                      if (res.ok) setGeneratedKeys(await res.json());
+                    }}
+                    className="rounded-lg bg-white/8 hover:bg-white/12 border border-white/10 px-4 py-2 text-xs font-medium transition-colors"
+                  >
+                    Generate new VAPID keys
+                  </button>
+                </div>
+
+                {generatedKeys && (
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-3 space-y-2 text-xs font-mono">
+                    <p className="text-white/40 text-[10px] uppercase tracking-wide mb-1">Add these to Vercel → Environment Variables</p>
+                    <div>
+                      <span className="text-emerald-400">VAPID_PUBLIC_KEY</span>
+                      <p className="text-white/70 break-all mt-0.5">{generatedKeys.publicKey}</p>
+                    </div>
+                    <div>
+                      <span className="text-yellow-400">VAPID_PRIVATE_KEY</span>
+                      <p className="text-white/70 break-all mt-0.5">{generatedKeys.privateKey}</p>
+                    </div>
+                    <p className="text-white/30 text-[10px] pt-1">
+                      Also set VAPID_CONTACT_EMAIL=your@email.com · Then redeploy.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </Section>
+
           <Section title="Send Push Notification">
             <div className="space-y-3">
               <div>
@@ -464,6 +543,7 @@ export default function AdminPage() {
               )}
             </div>
           </Section>
+          </div>
         )}
       </main>
     </div>

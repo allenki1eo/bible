@@ -15,11 +15,40 @@ import {
   Coffee,
   ShieldCheck,
   Megaphone,
+  ChartBar,
 } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
+
+interface AppStats {
+  users: number;
+  stories: number;
+  testimonies: number;
+  prayers: number;
+}
+
+function StatPill({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="flex-1 text-center">
+      <div className="text-2xl font-bold text-primary">
+        {value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
+      </div>
+      <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+    </div>
+  );
+}
 
 export default function DonatePage() {
   const { t, locale } = useTranslation();
   const isSw = locale === "sw";
+
+  const [stats, setStats] = useState<AppStats | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stats")
+      .then((r) => r.json())
+      .then(setStats)
+      .catch(() => {});
+  }, []);
 
   const reasons = [
     {
@@ -110,6 +139,31 @@ export default function DonatePage() {
               : "Nuru is free for everyone. Your support helps us continue providing Bible stories, devotionals, and a faith community at no cost."}
           </p>
         </div>
+
+        {/* Giving Tracker */}
+        {stats && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <ChartBar size={18} className="text-primary" weight="fill" />
+                <p className="font-semibold text-sm">
+                  {isSw ? "Msaada wenu umefanya hivi:" : "Your support has powered:"}
+                </p>
+              </div>
+              <div className="flex divide-x divide-border">
+                <StatPill value={stats.users} label={isSw ? "Watumiaji" : "Believers"} />
+                <StatPill value={stats.stories} label={isSw ? "Hadithi" : "Stories"} />
+                <StatPill value={stats.testimonies} label={isSw ? "Ushuhuda" : "Testimonies"} />
+                <StatPill value={stats.prayers} label={isSw ? "Maombi" : "Prayers"} />
+              </div>
+              <p className="text-xs text-muted-foreground/60 text-center mt-3">
+                {isSw
+                  ? "Kila mchango unasaidia kuendelea kutoa huduma hizi bure."
+                  : "Every contribution keeps these services free for everyone."}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Why We Need Help */}
         <div>

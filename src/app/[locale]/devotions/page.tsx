@@ -7,6 +7,7 @@ import { useToast } from "@/components/toast";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Notebook,
   Fire,
@@ -528,11 +529,10 @@ export default function DevotionsPage() {
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">{isSw ? "Chagua" : "Explore"}</h2>
           {[
-            { id: "journal", icon: Notebook, label: t("devotions.prayer_journal"), href: `${pathname}/journal` },
-            { id: "streak", icon: Fire, label: t("devotions.vine_streak"), href: `${pathname}/streak` },
-            { id: "study-plans", icon: BookOpen, label: isSw ? "Mipango ya Usomaji" : "Study Plans", href: `${pathname}/study-plans` },
-            { id: "quiz", icon: Brain, label: t("devotions.quiz_title"), href: `${pathname}/quiz` },
-            { id: "achievements", icon: Trophy, label: isSw ? "Mafanikio" : "Achievements", href: `${pathname.replace("/devotions", "")}/achievements` },
+            { id: "journal",     icon: Notebook, label: t("devotions.prayer_journal"),         href: `${pathname}/journal` },
+            { id: "streak",      icon: Fire,     label: t("devotions.vine_streak"),             href: `${pathname}/streak` },
+            { id: "study-plans", icon: BookOpen, label: isSw ? "Mipango ya Usomaji" : "Bible Study Plans", href: `${pathname}/study-plans` },
+            { id: "achievements",icon: Trophy,   label: isSw ? "Mafanikio" : "Achievements",   href: `${pathname.replace("/devotions", "")}/achievements` },
           ].map((item) => (
             <Link key={item.id} href={item.href}>
               <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors">
@@ -546,6 +546,43 @@ export default function DevotionsPage() {
               </Card>
             </Link>
           ))}
+
+          {/* Games section */}
+          <h2 className="text-lg font-semibold pt-2">{isSw ? "Michezo" : "Games & Challenges"}</h2>
+          <Link href={`${pathname}/quiz`}>
+            <Card className="card-lift cursor-pointer border-primary/20 bg-gradient-to-r from-primary/5 to-purple-500/5 hover:from-primary/10 hover:to-purple-500/10 transition-all">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                  <span className="text-lg">🎮</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{isSw ? "Mchezo wa Maandiko" : "Scripture Quest"}</p>
+                  <p className="text-xs text-muted-foreground">{isSw ? "Shindana na waumini duniani" : "Compete globally • Earn XP • Climb ranks"}</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Brain size={10} />
+                    {isSw ? "Cheza" : "Play"}
+                  </Badge>
+                  <CaretRight size={16} className="text-muted-foreground" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href={`${pathname}/quiz/leaderboard`}>
+            <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors border-amber-500/20">
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <span className="text-lg">🏆</span>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold">{isSw ? "Ubingwa wa Dunia" : "Global Leaderboard"}</p>
+                  <p className="text-xs text-muted-foreground">{isSw ? "Angalia wasomi bora duniani kote" : "See the top Scripture champions worldwide"}</p>
+                </div>
+                <CaretRight size={16} className="text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="h-4" />

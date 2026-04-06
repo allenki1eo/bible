@@ -84,7 +84,7 @@ export default function DonatePage() {
         : "Covers a full week of server and AI service costs",
     },
     {
-      name: isSw ? "Mpatroni wa Nuru" : "Nuru Patron",
+      name: isSw ? "Mfadhili wa Nuru" : "Nuru Supporter",
       price: "$25",
       emoji: "\u{1F31F}",
       description: isSw
@@ -155,20 +155,29 @@ export default function DonatePage() {
 
           <div className="grid gap-3">
             {tiers.map((tier, i) => (
-              <Card key={i} className="card-lift cursor-pointer hover:border-primary/30 transition-colors">
-                <CardContent className="p-5 flex items-center gap-4">
-                  <span className="text-3xl">{tier.emoji}</span>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{tier.name}</h3>
-                      <span className="text-primary font-bold">{tier.price}/mo</span>
+              <a
+                key={i}
+                href="https://snippe.me/pay/nuru"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Card className="card-lift cursor-pointer hover:border-primary/30 transition-colors">
+                  <CardContent className="p-5 flex items-center gap-4">
+                    <span className="text-3xl">{tier.emoji}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{tier.name}</h3>
+                        <span className="text-primary font-bold">{tier.price}/mo</span>
+                      </div>
+                      <p className="text-muted-foreground text-sm mt-0.5">
+                        {tier.description}
+                      </p>
                     </div>
-                    <p className="text-muted-foreground text-sm mt-0.5">
-                      {tier.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                    <ArrowSquareOut size={16} className="text-muted-foreground flex-shrink-0" />
+                  </CardContent>
+                </Card>
+              </a>
             ))}
           </div>
         </div>
@@ -190,19 +199,19 @@ export default function DonatePage() {
               </p>
             </div>
             <a
-              href="https://patreon.com/Nuru336"
+              href="https://snippe.me/pay/nuru"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block"
             >
               <Button className="gap-2 btn-press" size="lg">
                 <Heart size={20} weight="fill" />
-                {isSw ? "Tusaidie kwenye Patreon" : "Support Us on Patreon"}
+                {isSw ? "Tusaidie kupitia Snippe" : "Support Us via Snippe"}
                 <ArrowSquareOut size={18} />
               </Button>
             </a>
             <p className="text-muted-foreground/60 text-xs">
-              {isSw ? "Utapelekwa kwenye Patreon yetu" : "You'll be taken to our Patreon page"}
+              {isSw ? "Utapelekwa kwenye ukurasa wetu wa malipo" : "You'll be taken to our secure payment page"}
             </p>
           </CardContent>
         </Card>

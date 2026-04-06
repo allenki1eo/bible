@@ -20,12 +20,43 @@ import {
   Moon,
   Swatches,
   BookmarkSimple,
+  Clock,
+  BookOpen,
+  UsersThree,
+  Sparkle,
+  ChartBar,
 } from "@phosphor-icons/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import { ThemeSelector } from "@/components/theme-selector";
 import { NotificationToggle } from "@/components/notification-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+
+interface NotifPrefs {
+  time: string;
+  topics: string[];
+}
+
+const NOTIF_TIMES = [
+  { value: "05:00", label: "5:00 AM" },
+  { value: "06:00", label: "6:00 AM" },
+  { value: "07:00", label: "7:00 AM" },
+  { value: "08:00", label: "8:00 AM" },
+  { value: "09:00", label: "9:00 AM" },
+];
+
+const NOTIF_TOPICS = [
+  { key: "devotions", label: "Daily Devotion", labelSw: "Ibada ya Kila Siku", icon: <BookOpen size={13} /> },
+  { key: "community", label: "Community activity", labelSw: "Shughuli za Jamii", icon: <UsersThree size={13} /> },
+  { key: "stories", label: "New story tips", labelSw: "Vidokezo vya Hadithi", icon: <Sparkle size={13} /> },
+];
+
+function loadPrefs(): Partial<NotifPrefs> {
+  try {
+    return JSON.parse(localStorage.getItem("nuru_notif_prefs") || "{}") as Partial<NotifPrefs>;
+  } catch { return {}; }
+}
 
 export default function ProfilePage() {
   const { t, locale } = useTranslation();
@@ -36,6 +67,28 @@ export default function ProfilePage() {
   const pathname = usePathname();
   const localePrefix = pathname.split("/")[1];
   const isSw = locale === "sw";
+
+  const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({ time: "07:00", topics: ["devotions"] });
+
+  useEffect(() => {
+    const saved = loadPrefs();
+    setNotifPrefs({
+      time: saved.time ?? "07:00",
+      topics: saved.topics ?? ["devotions"],
+    });
+  }, []);
+
+  const savePrefs = (updated: NotifPrefs) => {
+    setNotifPrefs(updated);
+    localStorage.setItem("nuru_notif_prefs", JSON.stringify(updated));
+  };
+
+  const toggleTopic = (key: string) => {
+    const topics = notifPrefs.topics.includes(key)
+      ? notifPrefs.topics.filter((t) => t !== key)
+      : [...notifPrefs.topics, key];
+    savePrefs({ ...notifPrefs, topics });
+  };
 
   return (
     <PageWrapper title={t("profile.title")}>
@@ -86,10 +139,7 @@ export default function ProfilePage() {
                   {t("profile.guest_note")}
                 </p>
               </div>
-              <Button
-                size="sm"
-                onClick={() => router.push(`/${locale}/auth`)}
-              >
+              <Button size="sm" onClick={() => router.push(`/${locale}/auth`)}>
                 {t("profile.sign_up")}
               </Button>
             </CardContent>
@@ -122,39 +172,19 @@ export default function ProfilePage() {
           <Card>
             <CardContent className="p-4 flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                {theme === "dark" ? (
-                  <Moon size={20} className="text-foreground" />
-                ) : (
-                  <Sun size={20} className="text-foreground" />
-                )}
+                {theme === "dark" ? <Moon size={20} className="text-foreground" /> : <Sun size={20} className="text-foreground" />}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">
-                  {isSw ? "Mandhari" : "Theme"}
-                </p>
+                <p className="font-medium text-sm">{isSw ? "Mandhari" : "Theme"}</p>
                 <p className="text-muted-foreground text-xs mt-0.5">
-                  {theme === "dark"
-                    ? isSw ? "Giza" : "Dark"
-                    : theme === "light"
-                      ? isSw ? "Mwangaza" : "Light"
-                      : isSw ? "Mfumo" : "System"}
+                  {theme === "dark" ? (isSw ? "Giza" : "Dark") : theme === "light" ? (isSw ? "Mwangaza" : "Light") : (isSw ? "Mfumo" : "System")}
                 </p>
               </div>
               <div className="flex items-center gap-1">
-                <Button
-                  variant={theme === "light" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setTheme("light")}
-                >
+                <Button variant={theme === "light" ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setTheme("light")}>
                   <Sun size={16} />
                 </Button>
-                <Button
-                  variant={theme === "dark" ? "default" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setTheme("dark")}
-                >
+                <Button variant={theme === "dark" ? "default" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setTheme("dark")}>
                   <Moon size={16} />
                 </Button>
               </div>
@@ -182,9 +212,7 @@ export default function ProfilePage() {
             <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-4">
                 <Swatches size={20} className="text-foreground" />
-                <h3 className="font-medium text-sm">
-                  {isSw ? "Mandhari" : "Appearance"}
-                </h3>
+                <h3 className="font-medium text-sm">{isSw ? "Mandhari" : "Appearance"}</h3>
               </div>
               <ThemeSelector />
             </CardContent>
@@ -193,15 +221,14 @@ export default function ProfilePage() {
           {/* Notifications */}
           <Card>
             <CardContent className="p-4 space-y-4">
+              {/* header row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                     <Bell size={20} className="text-foreground" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">
-                      {t("profile.notifications")}
-                    </p>
+                    <p className="font-medium text-sm">{t("profile.notifications")}</p>
                     <p className="text-muted-foreground text-xs mt-0.5">
                       {isSw ? "Arifa za push" : "Push notifications"}
                     </p>
@@ -209,20 +236,66 @@ export default function ProfilePage() {
                 </div>
                 <NotificationToggle />
               </div>
-              <div className="space-y-3 pl-14">
-                <div className="flex items-center justify-between">
+
+              {/* Delivery time */}
+              <div className="pl-14 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Clock size={13} className="text-muted-foreground" />
                   <Label className="text-muted-foreground text-xs">
-                    {t("profile.morning_reminder")}
+                    {isSw ? "Wakati wa taarifa" : "Notification time (EAT)"}
                   </Label>
-                  <Switch defaultChecked />
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {NOTIF_TIMES.map((t) => (
+                    <button
+                      key={t.value}
+                      onClick={() => savePrefs({ ...notifPrefs, time: t.value })}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors ${
+                        notifPrefs.time === t.value
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Topic toggles */}
+                <div className="pt-1 space-y-2">
                   <Label className="text-muted-foreground text-xs">
-                    {t("profile.evening_nudge")}
+                    {isSw ? "Aina za arifa" : "Notify me about"}
                   </Label>
-                  <Switch defaultChecked />
+                  {NOTIF_TOPICS.map((topic) => (
+                    <div key={topic.key} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {topic.icon}
+                        {isSw ? topic.labelSw : topic.label}
+                      </div>
+                      <Switch
+                        checked={notifPrefs.topics.includes(topic.key)}
+                        onCheckedChange={() => toggleTopic(topic.key)}
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Analytics */}
+          <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => router.push(`/${localePrefix}/analytics`)}>
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                <ChartBar size={20} className="text-foreground" weight="fill" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">{isSw ? "Takwimu" : "Analytics"}</p>
+                <p className="text-muted-foreground text-xs mt-0.5">
+                  {isSw ? "Ona jinsi Nuru inavyokua" : "See how Nuru is growing"}
+                </p>
+              </div>
+              <CaretRight size={16} className="text-muted-foreground" />
             </CardContent>
           </Card>
 
@@ -233,13 +306,9 @@ export default function ProfilePage() {
                 <Shield size={20} className="text-foreground" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-sm">
-                  {isSw ? "Faragha" : "Privacy"}
-                </p>
+                <p className="font-medium text-sm">{isSw ? "Faragha" : "Privacy"}</p>
                 <p className="text-muted-foreground text-xs mt-0.5">
-                  {isSw
-                    ? "Maombi yako yamefichwa"
-                    : "Your prayers are encrypted"}
+                  {isSw ? "Maombi yako yamefichwa" : "Your prayers are encrypted"}
                 </p>
               </div>
               <CaretRight size={16} className="text-muted-foreground" />
@@ -250,10 +319,7 @@ export default function ProfilePage() {
         {/* Sign Out */}
         {user && !user.isGuest && (
           <Button
-            onClick={async () => {
-              await signOut();
-              router.push(`/${locale}`);
-            }}
+            onClick={async () => { await signOut(); router.push(`/${locale}`); }}
             variant="outline"
             className="w-full gap-2 text-muted-foreground hover:text-destructive hover:border-destructive/30"
           >

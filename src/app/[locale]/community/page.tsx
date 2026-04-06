@@ -10,7 +10,6 @@ import { TestimonyComments } from "@/components/testimony-comments";
 import {
   HandsPraying,
   Heart,
-  ShareNetwork,
   Plus,
   CaretDown,
   CaretUp,
@@ -20,6 +19,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase-browser";
+import { ShareTestimonyCard } from "@/components/share-testimony-card";
 
 interface Testimony {
   id: string;
@@ -232,9 +232,14 @@ function TestimonyCard({ testimony, user, isSw, t }: {
             label={t("community.praying")}
             activeColor="bg-rose-500/10 text-rose-600 dark:text-rose-400"
           />
-          <button className="ml-auto p-2 rounded-lg text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/50 transition-colors">
-            <ShareNetwork size={16} />
-          </button>
+          <div className="ml-auto">
+            <ShareTestimonyCard
+              content={testimony.content}
+              authorName={testimony.author_name}
+              isAnonymous={testimony.is_anonymous}
+              locale={isSw ? "sw" : "en"}
+            />
+          </div>
         </div>
 
         {/* Comments */}

@@ -124,26 +124,24 @@ export default function AdminPage() {
 
   // ── Load all dashboard data ───────────────────────────────────────────────
   const loadData = useCallback(async () => {
+    // Use the server-side stats API for counts that need the service role key
+    // (push_subscriptions is protected by RLS, so browser client returns 0)
     const res = await fetch("/api/stats");
     const data = await res.json();
 
     const supabase = createBrowserClient();
 
     const [
-      { count: subscribers },
-      { count: completed },
       { data: userRows },
       { data: flaggedRows },
       { data: recentRows },
     ] = await Promise.all([
-      supabase.from("push_subscriptions").select("*", { count: "exact", head: true }),
-      supabase.from("devotions").select("*", { count: "exact", head: true }).eq("completed", true),
       supabase.from("profiles").select("id, display_name, language, created_at").order("created_at", { ascending: false }).limit(50),
       supabase.from("testimonies").select("id, content, is_anonymous, moderation_status, created_at").eq("moderation_status", "flagged").limit(20),
       supabase.from("testimonies").select("id, content, is_anonymous, moderation_status, created_at").order("created_at", { ascending: false }).limit(10),
     ]);
 
-    setStats({ ...data, subscribers: subscribers ?? 0, completedDevotions: completed ?? 0 });
+    setStats(data);
     setUsers(userRows ?? []);
     setFlagged(flaggedRows ?? []);
     setRecentTestimonies(recentRows ?? []);

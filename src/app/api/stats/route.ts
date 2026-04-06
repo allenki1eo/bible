@@ -15,11 +15,15 @@ export async function GET() {
       { count: stories },
       { count: testimonies },
       { count: prayers },
+      { count: subscribers },
+      { count: completedDevotions },
     ] = await Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
       supabase.from("stories").select("*", { count: "exact", head: true }),
       supabase.from("testimonies").select("*", { count: "exact", head: true }),
       supabase.from("prayers").select("*", { count: "exact", head: true }),
+      supabase.from("push_subscriptions").select("*", { count: "exact", head: true }),
+      supabase.from("devotions").select("*", { count: "exact", head: true }).eq("completed", true),
     ]);
 
     return NextResponse.json({
@@ -27,8 +31,10 @@ export async function GET() {
       stories: stories ?? 0,
       testimonies: testimonies ?? 0,
       prayers: prayers ?? 0,
+      subscribers: subscribers ?? 0,
+      completedDevotions: completedDevotions ?? 0,
     });
   } catch {
-    return NextResponse.json({ users: 0, stories: 0, testimonies: 0, prayers: 0 });
+    return NextResponse.json({ users: 0, stories: 0, testimonies: 0, prayers: 0, subscribers: 0, completedDevotions: 0 });
   }
 }

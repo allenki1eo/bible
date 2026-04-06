@@ -141,7 +141,8 @@ export async function POST(req: NextRequest) {
     const isSw = language === "sw";
 
     // Fetch actual Bible verses
-    const version = isSw ? "swh_bib" : "en-kjv";
+    // WEB = World English Bible — modern, clear, plain language, fully public domain
+    const version = isSw ? "swh_bib" : "en-web";
     const fetchedVerses = await fetchVerses(moodData.verses, version);
 
     const verseBlock = fetchedVerses.length > 0
@@ -183,7 +184,7 @@ Urefu: maneno 350-450.`
 ━━━ PERSON'S STATE ━━━
 Feeling: "${moodData.en}" (${moodData.theme})
 
-━━━ ACTUAL BIBLE VERSES (King James Version) ━━━
+━━━ ACTUAL BIBLE VERSES (World English Bible) ━━━
 Read these carefully — they are the foundation for the entire devotional:
 ${verseBlock}
 

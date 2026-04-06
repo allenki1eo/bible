@@ -283,38 +283,38 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Analytics */}
-          <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => router.push(`/${localePrefix}/analytics`)}>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                <ChartBar size={20} className="text-foreground" weight="fill" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-sm">{isSw ? "Takwimu" : "Analytics"}</p>
-                <p className="text-muted-foreground text-xs mt-0.5">
-                  {isSw ? "Ona jinsi Nuru inavyokua" : "See how Nuru is growing"}
-                </p>
-              </div>
-              <CaretRight size={16} className="text-muted-foreground" />
-            </CardContent>
-          </Card>
-
-          {/* Admin panel — only shown to admin emails */}
+          {/* Admin panel — analytics + management, only shown to admin emails */}
           {user && !user.isGuest && (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "").split(",").map(e => e.trim().toLowerCase()).includes(user.email.toLowerCase()) && (
-            <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors border-primary/30" onClick={() => router.push("/admin")}>
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <span className="text-base">🛡️</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-sm text-primary">{isSw ? "Dashibodi ya Msimamizi" : "Admin Dashboard"}</p>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    {isSw ? "Usimamizi wa programu" : "Users, content, push & analytics"}
-                  </p>
-                </div>
-                <CaretRight size={16} className="text-primary" />
-              </CardContent>
-            </Card>
+            <>
+              <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => router.push(`/${localePrefix}/analytics`)}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                    <ChartBar size={20} className="text-foreground" weight="fill" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{isSw ? "Takwimu" : "Analytics"}</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {isSw ? "Ona jinsi Nuru inavyokua" : "See how Nuru is growing"}
+                    </p>
+                  </div>
+                  <CaretRight size={16} className="text-muted-foreground" />
+                </CardContent>
+              </Card>
+              <Card className="card-lift cursor-pointer hover:bg-accent/50 transition-colors border-primary/30" onClick={() => router.push("/admin")}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <span className="text-base">🛡️</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-primary">{isSw ? "Dashibodi ya Msimamizi" : "Admin Dashboard"}</p>
+                    <p className="text-muted-foreground text-xs mt-0.5">
+                      {isSw ? "Usimamizi wa programu" : "Users, content, push & analytics"}
+                    </p>
+                  </div>
+                  <CaretRight size={16} className="text-primary" />
+                </CardContent>
+              </Card>
+            </>
           )}
 
           {/* Privacy */}

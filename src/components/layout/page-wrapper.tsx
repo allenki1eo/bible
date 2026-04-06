@@ -24,8 +24,8 @@ export function PageWrapper({
   return (
     <div className="min-h-screen bg-background">
       <TopBar title={title} showBell={showBell} onBellClick={handleBellClick} />
-      {/* pb accounts for the floating bottom nav (60px pill + 8px padding top + 8px padding bottom) */}
-      <main className="pb-24 max-w-2xl mx-auto">{children}</main>
+      {/* pb-32 ensures content clears the floating bottom nav (60px + padding + safe-area-inset) on all devices */}
+      <main className="pb-32 max-w-2xl mx-auto">{children}</main>
       <BottomNav />
     </div>
   );

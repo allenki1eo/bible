@@ -16,10 +16,11 @@ import { useAuthStore } from "@/stores/auth-store";
 import Link from "next/link";
 
 // ── Types ───────────────────────────────────────────────────────────────────
-type MCQuestion  = { type: "multiple_choice"; question: string; options: string[]; answer: string };
-type FillQuestion = { type: "fill_blank"; verse: string; answer: string; ref: string };
-type TFQuestion  = { type: "true_false"; statement: string; answer: boolean };
-type Question    = MCQuestion | FillQuestion | TFQuestion;
+type MCQuestion   = { type: "multiple_choice"; question: string; options: string[]; answer: string; category?: string };
+type FillQuestion = { type: "fill_blank"; verse: string; answer: string; ref: string; category?: string };
+type TFQuestion   = { type: "true_false"; statement: string; answer: boolean; category?: string };
+type WSIQuestion  = { type: "who_said_it"; quote: string; options: string[]; answer: string; category?: string };
+type Question     = MCQuestion | FillQuestion | TFQuestion | WSIQuestion;
 
 // ── Constants ───────────────────────────────────────────────────────────────
 const TIMER_SECS = 15;
@@ -227,6 +228,7 @@ export default function QuizPage() {
     const timeSpent = TIMER_SECS - timeLeft;
     let correct = false;
     if (current.type === "multiple_choice") correct = selectedOption === current.answer;
+    else if (current.type === "who_said_it") correct = selectedOption === current.answer;
     else if (current.type === "fill_blank")  correct = fillInput.trim().toLowerCase() === current.answer.toLowerCase();
     else if (current.type === "true_false")  correct = tfAnswer === current.answer;
     handleAnswer(correct, timeSpent);
@@ -271,8 +273,9 @@ export default function QuizPage() {
   const current = questions[currentIdx];
   const canCheck =
     (current?.type === "multiple_choice" && selectedOption !== null) ||
-    (current?.type === "fill_blank" && fillInput.trim().length > 0) ||
-    (current?.type === "true_false" && tfAnswer !== null);
+    (current?.type === "who_said_it"     && selectedOption !== null) ||
+    (current?.type === "fill_blank"      && fillInput.trim().length > 0) ||
+    (current?.type === "true_false"      && tfAnswer !== null);
 
   const pctDone = questions.length > 0 ? (currentIdx / questions.length) * 100 : 0;
 
@@ -518,10 +521,13 @@ export default function QuizPage() {
             <CardContent className="p-5 space-y-5">
               {/* Type label */}
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                  {current.type === "multiple_choice" ? (isSw ? "Chaguo Nyingi" : "Multiple Choice") :
-                   current.type === "fill_blank"       ? (isSw ? "Jaza Nafasi" : "Fill the Blank") :
-                                                         (isSw ? "Kweli / Uongo" : "True or False")}
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-primary/10 text-primary">
+                  {"category" in current && current.category
+                    ? current.category
+                    : current.type === "multiple_choice" ? (isSw ? "Chaguo Nyingi" : "Multiple Choice")
+                    : current.type === "who_said_it"     ? (isSw ? "Alisema Nani?" : "Who Said It?")
+                    : current.type === "fill_blank"       ? (isSw ? "Jaza Nafasi" : "Fill the Blank")
+                    : (isSw ? "Kweli / Uongo" : "True or False")}
                 </span>
                 {streak >= 2 && (
                   <span className="text-xs font-bold text-orange-500 flex items-center gap-1">
@@ -534,6 +540,33 @@ export default function QuizPage() {
               {current.type === "multiple_choice" && (
                 <div className="space-y-3">
                   <p className="font-semibold text-sm leading-relaxed">{current.question}</p>
+                  <div className="space-y-2.5">
+                    {current.options.map((opt) => (
+                      <OptionBtn
+                        key={opt}
+                        label={opt}
+                        selected={selectedOption === opt}
+                        feedback={feedback !== null}
+                        isCorrect={feedback !== null && opt === current.answer}
+                        isWrong={feedback !== null && opt === selectedOption && opt !== current.answer}
+                        onClick={() => feedback === null && setSelectedOption(opt)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Who Said It */}
+              {current.type === "who_said_it" && (
+                <div className="space-y-3">
+                  <div className="bg-muted/60 rounded-xl p-4 border-l-4 border-primary/50">
+                    <p className="text-base font-bold italic text-foreground leading-relaxed">
+                      &ldquo;{current.quote}&rdquo;
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground font-medium">
+                    {isSw ? "Ni nani alisema maneno haya?" : "Who said these words?"}
+                  </p>
                   <div className="space-y-2.5">
                     {current.options.map((opt) => (
                       <OptionBtn

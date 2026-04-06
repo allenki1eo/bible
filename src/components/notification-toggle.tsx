@@ -3,20 +3,28 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
-import { Bell, BellSlash } from "@phosphor-icons/react";
+import { Bell, BellSlash, Warning } from "@phosphor-icons/react";
 import { useToast } from "@/components/toast";
 
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
-
-function urlBase64ToUint8Array(base64String: string) {
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+  const buffer = new ArrayBuffer(rawData.length);
+  const view = new Uint8Array(buffer);
+  for (let i = 0; i < rawData.length; ++i) view[i] = rawData.charCodeAt(i);
+  return buffer;
+}
+
+/** Fetch VAPID public key from the server (works with or without NEXT_PUBLIC_ prefix) */
+async function fetchVapidKey(): Promise<string> {
+  const res = await fetch("/api/notifications/vapid-key");
+  if (!res.ok) {
+    const { error } = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error(error ?? "Could not load VAPID key");
   }
-  return outputArray;
+  const { publicKey } = await res.json();
+  return publicKey as string;
 }
 
 export function NotificationToggle() {
@@ -45,12 +53,20 @@ export function NotificationToggle() {
       toast("Sign in to enable notifications", "error");
       return;
     }
-    if (!VAPID_PUBLIC_KEY) {
-      toast("Push notifications not configured (missing VAPID key)", "error");
-      return;
-    }
     setLoading(true);
     try {
+      // 1. Fetch VAPID public key from server
+      let vapidPublicKey: string;
+      try {
+        vapidPublicKey = await fetchVapidKey();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "VAPID key not configured";
+        toast(`Notifications not set up: ${msg}`, "error");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Request browser permission
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         toast("Permission denied — enable notifications in your browser settings", "error");
@@ -58,14 +74,24 @@ export function NotificationToggle() {
         return;
       }
 
-      // Make sure SW is registered and active
+      // 3. Register service worker and subscribe
       const reg = await navigator.serviceWorker.ready;
+      let subscription: PushSubscription;
+      try {
+        subscription = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+        });
+      } catch (err) {
+        // Common causes: bad key format, browser blocks push, or existing sub mismatch
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error("[NotificationToggle] subscribe error:", msg);
+        toast(`Could not subscribe: ${msg}`, "error");
+        setLoading(false);
+        return;
+      }
 
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-      });
-
+      // 4. Send subscription to Supabase via our API
       const prefs = (() => {
         try { return JSON.parse(localStorage.getItem("nuru_notif_prefs") || "{}"); } catch { return {}; }
       })();
@@ -81,15 +107,15 @@ export function NotificationToggle() {
       });
 
       if (!res.ok) {
-        const { error } = await res.json().catch(() => ({ error: "Unknown error" }));
-        throw new Error(error || `HTTP ${res.status}`);
+        const { error } = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(error ?? "Failed to save subscription");
       }
 
       setSubscribed(true);
       toast("Notifications enabled! You'll get your morning devotion at 7 AM EAT.", "success");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to enable notifications";
-      console.error("[NotificationToggle] subscribe error:", err);
+      console.error("[NotificationToggle] error:", err);
       toast(msg, "error");
     }
     setLoading(false);
@@ -111,7 +137,6 @@ export function NotificationToggle() {
     setLoading(false);
   };
 
-  // Don't render if no user, not supported, or VAPID not configured
   if (!user || !supported) return null;
 
   return (

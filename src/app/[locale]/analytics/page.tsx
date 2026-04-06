@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { useTranslation } from "@/hooks/use-client-i18n";
+import { useRouter } from "next/navigation";
 import { PageWrapper } from "@/components/layout/page-wrapper";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -52,18 +53,29 @@ function StatCard({ icon, label, value, color, bg, suffix }: StatCardProps) {
   );
 }
 
+const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? "")
+  .split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
+
 export default function AnalyticsPage() {
   const { locale } = useTranslation();
   const user = useAuthStore((s) => s.user);
+  const router = useRouter();
   const isSw = locale === "sw";
+
+  const isAdmin = user && !user.isGuest && ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   const [stats, setStats] = useState<Stats>({ users: 0, stories: 0, testimonies: 0, prayers: 0, subscribers: 0, completedDevotions: 0 });
   const [loading, setLoading] = useState(true);
   const [recentActivity, setRecentActivity] = useState<{ date: string; testimonies: number; stories: number }[]>([]);
 
   useEffect(() => {
-    loadStats();
-  }, []);
+    // Redirect non-admins to the full admin panel
+    if (user !== null && !isAdmin) {
+      router.replace("/admin");
+      return;
+    }
+    if (isAdmin) loadStats();
+  }, [user, isAdmin]);
 
   async function loadStats() {
     try {

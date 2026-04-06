@@ -320,32 +320,34 @@ export default function StudyPlanReaderPage({ params }: { params: Promise<{ plan
           ) : content ? (
             <StudyContent text={content} />
           ) : null}
-        </div>
-      </div>
 
-      {/* Sticky bottom bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur-md p-4 space-y-2">
-        {!isComplete ? (
-          <Button
-            className="w-full gap-2 max-w-2xl mx-auto flex"
-            size="lg"
-            onClick={markComplete}
-            disabled={loading || !!error}
-          >
-            <CheckCircle size={18} weight="fill" />
-            {isSw ? "Nimekamilisha Siku Hii" : "Mark Day as Complete"}
-          </Button>
-        ) : (
-          <div className="flex gap-2 max-w-2xl mx-auto">
-            <div className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600/10 border border-green-600/20 text-green-600 dark:text-green-400 text-sm font-semibold">
-              <CheckCircle size={16} weight="fill" />
-              {isSw ? "Imekamilika! 🎉" : "Day Complete! 🎉"}
+          {/* Mark complete — inline at bottom of content, always visible above nav */}
+          {!loading && !error && (
+            <div className="mt-10 pt-6 border-t border-border">
+              {!isComplete ? (
+                <Button
+                  className="w-full gap-2"
+                  size="lg"
+                  onClick={markComplete}
+                >
+                  <CheckCircle size={18} weight="fill" />
+                  {isSw ? "Nimekamilisha Siku Hii" : "Mark Day as Complete"}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-center gap-2 py-4 rounded-xl bg-green-600/10 border border-green-600/20 text-green-600 dark:text-green-400 font-semibold">
+                    <CheckCircle size={18} weight="fill" />
+                    {isSw ? "Umekamilisha siku hii! 🎉" : "Day Complete! Great work! 🎉"}
+                  </div>
+                  <Button variant="outline" className="w-full gap-2" onClick={() => router.back()}>
+                    <BookmarkSimple size={16} />
+                    {isSw ? "Rudi kwenye Mipango" : "Back to Study Plans"}
+                  </Button>
+                </div>
+              )}
             </div>
-            <Button variant="outline" onClick={() => router.back()} className="shrink-0">
-              <BookmarkSimple size={16} />
-            </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </PageWrapper>
   );

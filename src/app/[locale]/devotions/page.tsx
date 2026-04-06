@@ -17,21 +17,11 @@ import {
   CaretRight,
   Warning,
   BookOpen,
-  SunHorizon,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase-browser";
 import { STUDY_PLANS, getTodayChapter, getProgressDays } from "@/lib/study-plans";
-
-type DailyWord = {
-  title: string;
-  theme: string;
-  scripture_ref: string;
-  content: string;
-  prayer: string;
-  reflection_question: string;
-};
 
 type Enrollment = Record<string, { enrolledAt: string }>;
 
@@ -174,9 +164,6 @@ export default function DevotionsPage() {
   const [completing, setCompleting] = useState(false);
   const [streakData, setStreakData] = useState({ current_streak: 0, longest_streak: 0, grace_days_used: 0 });
   const [weekDays, setWeekDays] = useState<boolean[]>([false, false, false, false, false, false, false]);
-  const [dailyWord, setDailyWord] = useState<DailyWord | null>(null);
-  const [dailyWordLoading, setDailyWordLoading] = useState(true);
-  const [dailyWordExpanded, setDailyWordExpanded] = useState(false);
   const [studyEnrollments, setStudyEnrollments] = useState<Enrollment>({});
 
   const isSw = locale === "sw";
@@ -254,15 +241,6 @@ export default function DevotionsPage() {
   useEffect(() => {
     checkTodayDevotion();
   }, [checkTodayDevotion]);
-
-  // Fetch system daily word
-  useEffect(() => {
-    fetch(`/api/devotions/daily?locale=${locale}`)
-      .then((r) => r.json())
-      .then((data) => { if (data.title || data.theme) setDailyWord(data); })
-      .catch(() => {})
-      .finally(() => setDailyWordLoading(false));
-  }, [locale]);
 
   // Load study plan enrollments from localStorage
   useEffect(() => {
@@ -412,61 +390,6 @@ export default function DevotionsPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Today's Daily Word (system-generated) */}
-        <div>
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <SunHorizon size={18} className="text-amber-500" weight="fill" />
-            {isSw ? "Neno la Leo" : "Today's Daily Word"}
-          </h2>
-          {dailyWordLoading ? (
-            <div className="h-28 rounded-xl bg-muted animate-pulse" />
-          ) : dailyWord ? (
-            <Card className="border-amber-500/20 bg-amber-500/5">
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-semibold uppercase tracking-wider">
-                  <SunHorizon size={13} weight="fill" />
-                  {dailyWord.theme}
-                </div>
-                <p className="font-semibold text-sm">{dailyWord.title}</p>
-                {dailyWord.scripture_ref && (
-                  <p className="text-xs text-muted-foreground font-medium">{dailyWord.scripture_ref}</p>
-                )}
-                {dailyWord.content && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {dailyWordExpanded
-                      ? dailyWord.content
-                      : dailyWord.content.slice(0, 120) + (dailyWord.content.length > 120 ? "..." : "")}
-                  </p>
-                )}
-                {dailyWord.content && dailyWord.content.length > 120 && (
-                  <button
-                    onClick={() => setDailyWordExpanded((v) => !v)}
-                    className="text-xs text-primary font-medium hover:underline"
-                  >
-                    {dailyWordExpanded ? (isSw ? "Funga" : "Show less") : (isSw ? "Soma zaidi" : "Read more")}
-                  </button>
-                )}
-                {dailyWordExpanded && dailyWord.prayer && (
-                  <div className="border-t pt-3 space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {isSw ? "Maombi" : "Prayer"}
-                    </p>
-                    <p className="text-xs text-muted-foreground italic leading-relaxed">{dailyWord.prayer}</p>
-                  </div>
-                )}
-                {dailyWordExpanded && dailyWord.reflection_question && (
-                  <div className="border-t pt-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                      {isSw ? "Swali la Kutafakari" : "Reflection Question"}
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{dailyWord.reflection_question}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ) : null}
-        </div>
 
         {/* Study Plan Progress (if enrolled) */}
         {Object.keys(studyEnrollments).length > 0 && (

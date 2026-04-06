@@ -9,5 +9,5 @@ export default createMiddleware({
 
 export const config = {
   // Exclude root (/) and /landing from locale middleware so the landing page renders directly
-  matcher: ["/((?!api|_next|_vercel|landing|.*\\..*).+)"],
+  matcher: ["/((?!api|_next|_vercel|landing|admin|.*\\..*).+)"],
 };

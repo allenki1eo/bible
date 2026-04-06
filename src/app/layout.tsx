@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeBackground } from "@/components/theme-background";
 import { ToastProvider } from "@/components/toast";
 import { ServiceWorkerRegistration } from "@/components/sw-registration";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -58,6 +59,7 @@ export default function RootLayout({
             <ThemeBackground />
             <ServiceWorkerRegistration />
             {children}
+            <Analytics />
           </ToastProvider>
         </ThemeProvider>
       </body>
